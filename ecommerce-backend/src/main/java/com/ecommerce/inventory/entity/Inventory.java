@@ -35,7 +35,7 @@ public class Inventory {
 
     @Version
     @Column(nullable = false)
-    private Long version;
+    private int version;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
