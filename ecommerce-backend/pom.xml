@@ -74,50 +74,103 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<dependency>
+			<groupId>org.mapstruct</groupId>
+			<artifactId>mapstruct</artifactId>
+			<version>1.6.3</version>
+		</dependency>
 	</dependencies>
 
 	<build>
 		<plugins>
+
+			<!-- Spring Boot -->
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+
+			<!-- Maven Compiler + MapStruct + Lombok -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+
 				<executions>
+
+					<!-- Main source compilation -->
 					<execution>
 						<id>default-compile</id>
 						<phase>compile</phase>
 						<goals>
 							<goal>compile</goal>
 						</goals>
+
 						<configuration>
 							<annotationProcessorPaths>
+
+								<!-- Lombok -->
 								<path>
 									<groupId>org.projectlombok</groupId>
 									<artifactId>lombok</artifactId>
 								</path>
+
+								<!-- MapStruct -->
+								<path>
+									<groupId>org.mapstruct</groupId>
+									<artifactId>mapstruct-processor</artifactId>
+									<version>1.6.3</version>
+								</path>
+
+								<!-- Lombok + MapStruct integration -->
+								<path>
+									<groupId>org.projectlombok</groupId>
+									<artifactId>lombok-mapstruct-binding</artifactId>
+									<version>0.2.0</version>
+								</path>
+
 							</annotationProcessorPaths>
 						</configuration>
 					</execution>
+
+					<!-- Test source compilation -->
 					<execution>
 						<id>default-testCompile</id>
 						<phase>test-compile</phase>
 						<goals>
 							<goal>testCompile</goal>
 						</goals>
+
 						<configuration>
 							<annotationProcessorPaths>
+
+								<!-- Lombok -->
 								<path>
 									<groupId>org.projectlombok</groupId>
 									<artifactId>lombok</artifactId>
 								</path>
+
+								<!-- MapStruct -->
+								<path>
+									<groupId>org.mapstruct</groupId>
+									<artifactId>mapstruct-processor</artifactId>
+									<version>1.6.3</version>
+								</path>
+
+								<!-- Lombok + MapStruct integration -->
+								<path>
+									<groupId>org.projectlombok</groupId>
+									<artifactId>lombok-mapstruct-binding</artifactId>
+									<version>0.2.0</version>
+								</path>
+
 							</annotationProcessorPaths>
 						</configuration>
 					</execution>
+
 				</executions>
 			</plugin>
+
 		</plugins>
 	</build>
 
