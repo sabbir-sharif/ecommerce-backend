@@ -1,5 +1,6 @@
 package com.ecommerce.user.service;
 
+import com.ecommerce.common.exception.ResourceNotFoundException;
 import com.ecommerce.user.dto.UserCreateRequest;
 import com.ecommerce.user.dto.UserResponse;
 import com.ecommerce.user.dto.UserUpdateRequest;
@@ -54,7 +55,7 @@ public class UserServiceImpl implements UserService {
 
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found"));
 
         return userMapper.toResponse(user);
     }

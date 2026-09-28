@@ -2,6 +2,8 @@ package com.ecommerce.product.service;
 
 import com.ecommerce.category.entity.Category;
 import com.ecommerce.category.repository.CategoryRepository;
+import com.ecommerce.common.exception.ConflictException;
+import com.ecommerce.common.exception.ResourceNotFoundException;
 import com.ecommerce.product.dto.ProductCreateRequest;
 import com.ecommerce.product.dto.ProductResponse;
 import com.ecommerce.product.entity.Product;
@@ -25,12 +27,17 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse create(ProductCreateRequest request) {
 
         if (productRepository.existsBySku(request.getSku())) {
-            throw new RuntimeException("Product SKU already exists");
+            throw new ConflictException(
+                    "Product already exists with SKU: " + request.getSku()
+            );
         }
 
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() ->
-                        new RuntimeException("Category not found"));
+                        new ResourceNotFoundException(
+                                "Category not found with id: " + request.getCategoryId()
+                        )
+                );
 
         Product product = productMapper.toEntity(request);
 
@@ -47,7 +54,7 @@ public class ProductServiceImpl implements ProductService {
 
         Product product = productRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Product not found"));
+                        new ResourceNotFoundException("Product not found"));
 
         return productMapper.toResponse(product);
     }

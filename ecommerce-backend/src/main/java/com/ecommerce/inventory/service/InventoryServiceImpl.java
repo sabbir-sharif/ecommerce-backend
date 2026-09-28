@@ -1,5 +1,6 @@
 package com.ecommerce.inventory.service;
 
+import com.ecommerce.common.exception.ResourceNotFoundException;
 import com.ecommerce.inventory.dto.InventoryCreateRequest;
 import com.ecommerce.inventory.dto.InventoryResponse;
 import com.ecommerce.inventory.entity.Inventory;
@@ -44,7 +45,7 @@ public class InventoryServiceImpl implements InventoryService {
     public InventoryResponse getById(int id) {
 
         Inventory inventory = inventoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Inventory not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
 
         return inventoryMapper.toResponse(inventory);
     }
