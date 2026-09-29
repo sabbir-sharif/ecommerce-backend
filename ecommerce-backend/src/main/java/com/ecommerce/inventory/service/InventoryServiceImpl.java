@@ -1,5 +1,6 @@
 package com.ecommerce.inventory.service;
 
+import com.ecommerce.common.exception.ConflictException;
 import com.ecommerce.common.exception.ResourceNotFoundException;
 import com.ecommerce.inventory.dto.InventoryCreateRequest;
 import com.ecommerce.inventory.dto.InventoryResponse;
@@ -25,11 +26,11 @@ public class InventoryServiceImpl implements InventoryService {
     public InventoryResponse create(InventoryCreateRequest request) {
 
         if (inventoryRepository.existsByProductId(request.getProductId())) {
-            throw new RuntimeException("Inventory already exists for this product");
+            throw new ConflictException("Inventory already exists for this product");
         }
 
         Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
         Inventory inventory = inventoryMapper.toEntity(request);
 
@@ -55,7 +56,7 @@ public class InventoryServiceImpl implements InventoryService {
 
         Inventory inventory = inventoryRepository.findByProductId(productId)
                 .orElseThrow(() ->
-                        new RuntimeException("Inventory not found for product"));
+                        new ResourceNotFoundException("Inventory not found for product"));
 
         return inventoryMapper.toResponse(inventory);
     }
@@ -73,7 +74,7 @@ public class InventoryServiceImpl implements InventoryService {
     public InventoryResponse updateStock(int id, int quantity) {
 
         Inventory inventory = inventoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Inventory not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
 
         inventory.setQuantity(quantity);
 

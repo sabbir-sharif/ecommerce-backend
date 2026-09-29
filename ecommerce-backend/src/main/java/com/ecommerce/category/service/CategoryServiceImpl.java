@@ -6,6 +6,8 @@ import com.ecommerce.category.entity.Category;
 import com.ecommerce.category.entity.CategoryStatus;
 import com.ecommerce.category.mapper.CategoryMapper;
 import com.ecommerce.category.repository.CategoryRepository;
+import com.ecommerce.common.exception.ConflictException;
+import com.ecommerce.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +24,7 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponse create(CategoryCreateRequest request) {
 
         if (categoryRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Category name already exists");
+            throw new ConflictException("Category name already exists");
         }
 
         Category category = categoryMapper.toEntity(request);
@@ -39,7 +41,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Category not found"));
+                        new ResourceNotFoundException("Category not found"));
 
         return categoryMapper.toResponse(category);
     }
@@ -60,7 +62,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Category not found"));
+                        new ResourceNotFoundException("Category not found"));
 
 
         // * Check whether another category already
@@ -69,7 +71,7 @@ public class CategoryServiceImpl implements CategoryService {
         if (!category.getName().equals(request.getName())
                 && categoryRepository.existsByName(request.getName())) {
 
-            throw new RuntimeException("Category name already exists");
+            throw new ConflictException("Category name already exists");
         }
 
         category.setName(request.getName());
@@ -86,7 +88,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Category not found"));
+                        new ResourceNotFoundException("Category not found"));
 
         categoryRepository.delete(category);
     }
