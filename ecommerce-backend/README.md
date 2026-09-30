@@ -246,6 +246,15 @@ If there is no Maven wrapper:
 ``` bash
 mvn spring-boot:run
 ```
+## Postman Collection
+
+The project includes a ready-to-import Postman collection located in the `docs/postman/` directory.
+
+### File Location
+```text
+docs/postman/
+└── Postman_Collection_Import_v1.json
+```
 
 ## Suggested Manual Test Order
 
