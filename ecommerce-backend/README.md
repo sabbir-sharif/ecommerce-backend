@@ -286,27 +286,59 @@ future milestones.
 
 ## Roadmap
 
-1.  Review and integration-test the current controllers with Postman.
-2.  Complete validation and edge-case handling.
-3.  Add global exception handling and consistent error response bodies.
-4.  Implement JWT authentication, refresh tokens, password hashing, and
-    role-based authorization.
-5.  Add product search, filtering, sorting, and pagination.
-6.  Build robust inventory operations with transactions, optimistic
-    locking, and inventory movement history.
-7.  Implement carts, orders, and order status history.
-8.  Add simulated payments and idempotency.
-9.  Add JUnit/Mockito tests.
-10. Introduce Redis caching and Kafka events.
-11. Add Docker Compose, API documentation, and deployment setup.
+1. ✅ Review and integration-test the current controllers with Postman.
+2. ✅ Complete validation and edge-case handling.
+3. ✅ Add global exception handling and consistent error response bodies.
+4. 🔄 Implement JWT authentication, refresh tokens, password hashing, and
+   role-based authorization.
+5. ⬜ Add product search, filtering, sorting, and pagination.
+6. ⬜ Build robust inventory operations with transactions, optimistic
+   locking, and inventory movement history.
+7. ⬜ Implement carts, orders, and order status history.
+8. ⬜ Add simulated payments and idempotency.
+9. ⬜ Add JUnit/Mockito tests.
+10. ⬜ Introduce Redis caching and Kafka events.
+11. ⬜ Add Docker Compose, API documentation, and deployment setup.
 
-## Development Principles
+[//]: # (1.  Review and integration-test the current controllers with Postman.)
 
--   Keep controllers thin; put business rules in services.
--   Use DTOs as the public API contract, not JPA entities.
--   Resolve foreign-key relationships in the service layer.
--   Make stock operations transactional and auditable as the inventory
-    module matures.
--   Complete and verify each phase before moving to the next.
+[//]: # (2.  Complete validation and edge-case handling.)
+
+[//]: # (3.  Add global exception handling and consistent error response bodies.)
+
+[//]: # (4.  Implement JWT authentication, refresh tokens, password hashing, and)
+
+[//]: # (    role-based authorization.)
+
+[//]: # (5.  Add product search, filtering, sorting, and pagination.)
+
+[//]: # (6.  Build robust inventory operations with transactions, optimistic)
+
+[//]: # (    locking, and inventory movement history.)
+
+[//]: # (7.  Implement carts, orders, and order status history.)
+
+[//]: # (8.  Add simulated payments and idempotency.)
+
+[//]: # (9.  Add JUnit/Mockito tests.)
+
+[//]: # (10. Introduce Redis caching and Kafka events.)
+
+[//]: # (11. Add Docker Compose, API documentation, and deployment setup.)
+
+[//]: # (## Development Principles)
+
+[//]: # ()
+[//]: # (-   Keep controllers thin; put business rules in services.)
+
+[//]: # (-   Use DTOs as the public API contract, not JPA entities.)
+
+[//]: # (-   Resolve foreign-key relationships in the service layer.)
+
+[//]: # (-   Make stock operations transactional and auditable as the inventory)
+
+[//]: # (    module matures.)
+
+[//]: # (-   Complete and verify each phase before moving to the next.)
 
 ------------------------------------------------------------------------
