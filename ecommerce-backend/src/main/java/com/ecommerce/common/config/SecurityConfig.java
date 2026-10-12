@@ -35,19 +35,53 @@ public class SecurityConfig {
                         SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // Authentication endpoints are public.
-                        .requestMatchers("/api/auth/**").permitAll()
+                // Registration and login are public.
+                .requestMatchers("/api/auth/**").permitAll()
 
-                        // Public product and category browsing.
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/products",
-                                "/api/products/**",
-                                "/api/categories",
-                                "/api/categories/**"
-                        ).permitAll()
+                // Public product and category browsing.
+                .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/products", "/api/products/**",
+                        "/api/categories", "/api/categories/**"
+                ).permitAll()
 
-                        .anyRequest().authenticated()
+                // A user may access their own profile.
+                .requestMatchers(
+                        HttpMethod.GET, "/api/users/me"
+                ).authenticated()
+
+                // User administration is restricted to admins.
+                .requestMatchers("/api/users", "/api/users/**")
+                .hasRole("ADMIN")
+
+                // Product and category modifications are admin-only.
+                .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/products", "/api/products/**",
+                        "/api/categories", "/api/categories/**"
+                ).hasRole("ADMIN")
+                .requestMatchers(
+                        HttpMethod.PUT,
+                        "/api/products", "/api/products/**",
+                        "/api/categories", "/api/categories/**"
+                ).hasRole("ADMIN")
+                .requestMatchers(
+                        HttpMethod.PATCH,
+                        "/api/products", "/api/products/**",
+                        "/api/categories", "/api/categories/**"
+                ).hasRole("ADMIN")
+                .requestMatchers(
+                        HttpMethod.DELETE,
+                        "/api/products", "/api/products/**",
+                        "/api/categories", "/api/categories/**"
+                ).hasRole("ADMIN")
+
+                // Inventory management is admin-only.
+                .requestMatchers("/api/inventory", "/api/inventory/**")
+                .hasRole("ADMIN")
+
+                // All remaining endpoints require authentication.
+                .anyRequest().authenticated()
                 )
 
                 .addFilterBefore(
