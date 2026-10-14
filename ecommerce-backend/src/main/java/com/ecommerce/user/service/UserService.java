@@ -10,6 +10,8 @@ public interface UserService {
 
     UserResponse create(UserCreateRequest request);
 
+    UserResponse getCurrentUser(String email);
+
     UserResponse getById(int id);
 
     List<UserResponse> getAll();

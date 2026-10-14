@@ -13,6 +13,7 @@ import com.ecommerce.role.repository.RoleRepository;
 import com.ecommerce.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -49,6 +50,16 @@ public class UserServiceImpl implements UserService {
 
         // 6. Entity → Response DTO
         return userMapper.toResponse(savedUser);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponse getCurrentUser(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
+
+        return userMapper.toResponse(user);
     }
 
     @Override

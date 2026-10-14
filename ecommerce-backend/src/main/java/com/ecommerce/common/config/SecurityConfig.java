@@ -55,6 +55,7 @@ public class SecurityConfig {
                 ).authenticated()
 
                 // User administration is restricted to admins.
+                .requestMatchers("/api/users/me").authenticated()
                 .requestMatchers("/api/users",
                         "/api/users/**")
                 .hasRole("ADMIN")
