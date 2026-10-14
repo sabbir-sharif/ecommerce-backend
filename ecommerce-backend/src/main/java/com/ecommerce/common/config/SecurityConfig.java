@@ -43,8 +43,10 @@ public class SecurityConfig {
                 // Public product and category browsing.
                 .requestMatchers(
                         HttpMethod.GET,
-                        "/api/products", "/api/products/**",
-                        "/api/categories", "/api/categories/**"
+                        "/api/products",
+                        "/api/products/**",
+                        "/api/categories",
+                        "/api/categories/**"
                 ).permitAll()
 
                 // A user may access their own profile.
@@ -53,7 +55,8 @@ public class SecurityConfig {
                 ).authenticated()
 
                 // User administration is restricted to admins.
-                .requestMatchers("/api/users", "/api/users/**")
+                .requestMatchers("/api/users",
+                        "/api/users/**")
                 .hasRole("ADMIN")
 
                 // Product and category modifications are admin-only.
