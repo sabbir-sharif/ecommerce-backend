@@ -1,5 +1,6 @@
 package com.ecommerce.common.exception;
 
+import com.ecommerce.common.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +19,7 @@ public class GlobalExceptionHandler {
             LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleNotFound(
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(
             ResourceNotFoundException ex,
             HttpServletRequest request
     ) {
@@ -30,7 +31,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<ApiErrorResponse> handleConflict(
+    public ResponseEntity<ApiResponse<Void>> handleConflict(
             ConflictException ex,
             HttpServletRequest request
     ) {
@@ -45,7 +46,7 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException.class,
             MissingServletRequestParameterException.class
     })
-    public ResponseEntity<ApiErrorResponse> handleBadRequest(
+    public ResponseEntity<ApiResponse<Void>> handleBadRequest(
             Exception ex,
             HttpServletRequest request
     ) {
@@ -57,7 +58,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
             DataIntegrityViolationException ex,
             HttpServletRequest request
     ) {
@@ -72,11 +73,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiErrorResponse> handleUnexpected(
+    public ResponseEntity<ApiResponse<Void>> handleUnexpected(
             Exception ex,
             HttpServletRequest request
     ) {
-        log.error("Unexpected error at {}", request.getRequestURI(), ex);
+        log.error("Unexpected error at {}",
+                request.getRequestURI(), ex);
 
         return buildResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
@@ -85,19 +87,14 @@ public class GlobalExceptionHandler {
         );
     }
 
-    private ResponseEntity<ApiErrorResponse> buildResponse(
+    private ResponseEntity<ApiResponse<Void>> buildResponse(
             HttpStatus status,
             String message,
             String path
     ) {
-        ApiErrorResponse body = new ApiErrorResponse(
-                java.time.LocalDateTime.now(),
-                status.value(),
-                status.getReasonPhrase(),
-                message,
-                path
-        );
+        ApiResponse<Void> body = ApiResponse.error(message);
 
         return ResponseEntity.status(status).body(body);
     }
 }
+

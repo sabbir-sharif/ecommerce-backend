@@ -1,6 +1,7 @@
 package com.ecommerce.auth.security;
 
 import com.ecommerce.user.entity.User;
+import com.ecommerce.user.entity.UserStatus;
 import com.ecommerce.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -38,6 +39,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                                 "ROLE_" + user.getRole().getName()
                         )
                 )
+                .disabled(user.getStatus() != UserStatus.ACTIVE)
                 .build();
     }
 }
