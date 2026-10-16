@@ -71,18 +71,44 @@ public class InventoryServiceImpl implements InventoryService {
                 .toList();
     }
 
-    @Override
-    public InventoryResponse updateStock(int id, int quantity) {
+//    @Override
+//    public InventoryResponse updateStock(int id, int quantity) {
+//
+//        Inventory inventory = inventoryRepository.findById(id)
+//                .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
+//
+//        inventory.setQuantity(quantity);
+//
+//        Inventory updatedInventory = inventoryRepository.save(inventory);
+//
+//        return inventoryMapper.toResponse(updatedInventory);
+//    }
+@Override
+@Transactional
+public InventoryResponse updateStock(int id, int quantity) {
 
-        Inventory inventory = inventoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
-
-        inventory.setQuantity(quantity);
-
-        Inventory updatedInventory = inventoryRepository.save(inventory);
-
-        return inventoryMapper.toResponse(updatedInventory);
+    if (quantity < 0) {
+        throw new IllegalArgumentException(
+                "Total stock cannot be negative"
+        );
     }
+
+    Inventory inventory = inventoryRepository.findById(id)
+            .orElseThrow(() ->
+                    new ResourceNotFoundException("Inventory not found"));
+
+    if (quantity < inventory.getReservedQuantity()) {
+        throw new ConflictException(
+                "Total stock cannot be less than reserved stock"
+        );
+    }
+
+    inventory.setQuantity(quantity);
+
+    Inventory updatedInventory = inventoryRepository.save(inventory);
+
+    return inventoryMapper.toResponse(updatedInventory);
+}
 
     @Override
     @Transactional
