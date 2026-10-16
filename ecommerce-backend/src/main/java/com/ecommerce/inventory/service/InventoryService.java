@@ -16,4 +16,6 @@ public interface InventoryService {
     List<InventoryResponse> getAll();
 
     InventoryResponse updateStock(int id, int quantity);
+
+    InventoryResponse addStock(int id, int quantity);
 }

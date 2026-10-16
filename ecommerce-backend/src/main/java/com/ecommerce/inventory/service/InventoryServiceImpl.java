@@ -11,6 +11,7 @@ import com.ecommerce.product.entity.Product;
 import com.ecommerce.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -77,6 +78,29 @@ public class InventoryServiceImpl implements InventoryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
 
         inventory.setQuantity(quantity);
+
+        Inventory updatedInventory = inventoryRepository.save(inventory);
+
+        return inventoryMapper.toResponse(updatedInventory);
+    }
+
+    @Override
+    @Transactional
+    public InventoryResponse addStock(int id, int quantity) {
+
+        if (quantity <= 0) {
+            throw new IllegalArgumentException(
+                    "Quantity to add must be greater than zero"
+            );
+        }
+
+        Inventory inventory = inventoryRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Inventory not found"));
+
+        inventory.setQuantity(
+                Math.addExact(inventory.getQuantity(), quantity)
+        );
 
         Inventory updatedInventory = inventoryRepository.save(inventory);
 

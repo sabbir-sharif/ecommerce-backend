@@ -3,6 +3,7 @@ package com.ecommerce.inventory.controller;
 import com.ecommerce.common.response.ApiResponse;
 import com.ecommerce.inventory.dto.InventoryCreateRequest;
 import com.ecommerce.inventory.dto.InventoryResponse;
+import com.ecommerce.inventory.dto.StockAdjustmentRequest;
 import com.ecommerce.inventory.service.InventoryService;
 
 import jakarta.validation.Valid;
@@ -81,6 +82,20 @@ public class InventoryController {
 
         return ResponseEntity.ok(ApiResponse.success(
                 "Stock updated successfully",
+                response
+        ));
+    }
+
+    @PostMapping("/{id}/stock-adjustments")
+    public ResponseEntity<ApiResponse<InventoryResponse>> addStock(
+            @PathVariable int id,
+            @Valid @RequestBody StockAdjustmentRequest request) {
+
+        InventoryResponse response =
+                inventoryService.addStock(id, request.getQuantity());
+
+        return ResponseEntity.ok(ApiResponse.success(
+                "Stock increased successfully",
                 response
         ));
     }
