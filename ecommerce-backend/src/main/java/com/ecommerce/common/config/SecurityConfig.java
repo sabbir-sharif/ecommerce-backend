@@ -85,7 +85,13 @@ public class SecurityConfig {
                 // Inventory management is admin-only.
                 .requestMatchers("/api/inventory", "/api/inventory/**")
                 .hasRole("ADMIN")
-
+                                // Swagger / OpenAPI documentation
+                .requestMatchers(
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**",
+                        "/v3/api-docs"
+                ).permitAll()
                 // All remaining endpoints require authentication.
                 .anyRequest().authenticated()
                 )
