@@ -289,10 +289,11 @@ future milestones.
 1. ✅ Review and integration-test the current controllers with Postman.
 2. ✅ Complete validation and edge-case handling.
 3. ✅ Add global exception handling and consistent error response bodies.
-4. 🔄 Implement JWT authentication, refresh tokens, password hashing, and
+4. ✅ Implement JWT authentication, refresh tokens, password hashing, and
    role-based authorization.
-5. ⬜ Add product search, filtering, sorting, and pagination.
-6. ⬜ Build robust inventory operations with transactions, optimistic
+5. ✅ Build robust inventory operations with transactions, optimistic 
+   locking, and inventory movement history.
+6. 🔄 Add product search, filtering, sorting, and pagination.
    locking, and inventory movement history.
 7. ⬜ Implement carts, orders, and order status history.
 8. ⬜ Add simulated payments and idempotency.
