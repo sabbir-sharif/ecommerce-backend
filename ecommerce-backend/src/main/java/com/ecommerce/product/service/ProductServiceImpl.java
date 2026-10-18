@@ -6,6 +6,7 @@ import com.ecommerce.common.exception.ConflictException;
 import com.ecommerce.common.exception.ResourceNotFoundException;
 import com.ecommerce.product.dto.ProductCreateRequest;
 import com.ecommerce.product.dto.ProductResponse;
+import com.ecommerce.product.dto.ProductUpdateRequest;
 import com.ecommerce.product.entity.Product;
 import com.ecommerce.product.entity.ProductStatus;
 import com.ecommerce.product.mapper.ProductMapper;
@@ -130,6 +131,7 @@ public class ProductServiceImpl implements ProductService {
                 categoryId,
                 minPrice,
                 maxPrice,
+                ProductStatus.ACTIVE,
                 pageable
         );
 
@@ -185,7 +187,13 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductResponse update(
             int id,
-            ProductCreateRequest request) {
+            ProductUpdateRequest request) {
+
+        if (productRepository.existsBySkuAndIdNot(request.getSku(), id)) {
+            throw new ConflictException(
+                    "Another product already exists with SKU: " + request.getSku()
+            );
+        }
 
         Product product = productRepository.findById(id)
                 .orElseThrow(() ->
@@ -200,6 +208,7 @@ public class ProductServiceImpl implements ProductService {
         product.setSku(request.getSku());
         product.setPrice(request.getPrice());
         product.setCategory(category);
+        product.setStatus(request.getStatus());
 
         Product updatedProduct = productRepository.save(product);
 

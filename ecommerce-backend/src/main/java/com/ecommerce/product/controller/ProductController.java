@@ -3,6 +3,7 @@ package com.ecommerce.product.controller;
 import com.ecommerce.common.response.ApiResponse;
 import com.ecommerce.product.dto.ProductCreateRequest;
 import com.ecommerce.product.dto.ProductResponse;
+import com.ecommerce.product.dto.ProductUpdateRequest;
 import com.ecommerce.product.service.ProductService;
 
 import jakarta.validation.Valid;
@@ -57,7 +58,7 @@ public class ProductController {
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "2") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "DESC") String direction) {
 
@@ -104,10 +105,9 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductResponse>> update(
             @PathVariable int id,
-            @Valid @RequestBody ProductCreateRequest request) {
+            @Valid @RequestBody ProductUpdateRequest request) {
 
-        ProductResponse response =
-                productService.update(id, request);
+        ProductResponse response = productService.update(id, request);
 
         return ResponseEntity.ok(ApiResponse.success(
                 "Product updated successfully",

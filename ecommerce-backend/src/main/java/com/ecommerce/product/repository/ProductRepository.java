@@ -1,6 +1,7 @@
 package com.ecommerce.product.repository;
 
 import com.ecommerce.product.entity.Product;
+import com.ecommerce.product.entity.ProductStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.data.domain.Page;
@@ -17,6 +18,7 @@ public interface ProductRepository extends
         JpaRepository<Product, Integer> {
 
     boolean existsBySku(@NotBlank @Size(max = 100) String sku);
+    boolean existsBySkuAndIdNot(String sku, int id);
 
     @Query(
             value = """
@@ -31,6 +33,7 @@ public interface ProductRepository extends
             AND (:categoryId IS NULL OR p.category.id = :categoryId)
             AND (:minPrice IS NULL OR p.price >= :minPrice)
             AND (:maxPrice IS NULL OR p.price <= :maxPrice)
+            AND p.status = :status
         """,
             countQuery = """
         SELECT COUNT(p)
@@ -44,6 +47,7 @@ public interface ProductRepository extends
             AND (:categoryId IS NULL OR p.category.id = :categoryId)
             AND (:minPrice IS NULL OR p.price >= :minPrice)
             AND (:maxPrice IS NULL OR p.price <= :maxPrice)
+            AND p.status = :status
         """
     )
     Page<Product> searchProducts(
@@ -51,6 +55,7 @@ public interface ProductRepository extends
             @Param("categoryId") Integer categoryId,
             @Param("minPrice") BigDecimal minPrice,
             @Param("maxPrice") BigDecimal maxPrice,
+            @Param("status") ProductStatus status,
             Pageable pageable
     );
 }

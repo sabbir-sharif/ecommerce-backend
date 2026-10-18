@@ -2,6 +2,7 @@ package com.ecommerce.product.service;
 
 import com.ecommerce.product.dto.ProductCreateRequest;
 import com.ecommerce.product.dto.ProductResponse;
+import com.ecommerce.product.dto.ProductUpdateRequest;
 import org.springframework.data.domain.Page;
 
 import java.math.BigDecimal;
@@ -15,7 +16,7 @@ public interface ProductService {
 
     List<ProductResponse> getAll();
 
-    ProductResponse update(int id, ProductCreateRequest request);
+    ProductResponse update(int id, ProductUpdateRequest request);
 
     void delete(int id); // later active/inactive. product is related to other entity
 
