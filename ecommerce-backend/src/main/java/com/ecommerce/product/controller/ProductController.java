@@ -8,11 +8,14 @@ import com.ecommerce.product.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
@@ -48,15 +51,55 @@ public class ProductController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ProductResponse>>> getAll() {
+    public ResponseEntity<ApiResponse<?>> searchProducts(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String direction) {
 
-        List<ProductResponse> response = productService.getAll();
+        Page<ProductResponse> result = productService.search(
+                keyword,
+                categoryId,
+                minPrice,
+                maxPrice,
+                page,
+                size,
+                sortBy,
+                direction
+        );
 
-        return ResponseEntity.ok(ApiResponse.success(
-                "Products retrieved successfully",
-                response
-        ));
+        Map<String, Object> body = Map.of(
+                "products", result.getContent(),
+                "currentPage", result.getNumber(),
+                "pageSize", result.getSize(),
+                "totalElements", result.getTotalElements(),
+                "totalPages", result.getTotalPages(),
+                "isFirst", result.isFirst(),
+                "isLast", result.isLast()
+        );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Products retrieved successfully",
+                        body
+                )
+        );
     }
+
+//    @GetMapping
+//    public ResponseEntity<ApiResponse<List<ProductResponse>>> getAll() {
+//
+//        List<ProductResponse> response = productService.getAll();
+//
+//        return ResponseEntity.ok(ApiResponse.success(
+//                "Products retrieved successfully",
+//                response
+//        ));
+//    }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductResponse>> update(
