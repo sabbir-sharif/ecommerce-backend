@@ -293,9 +293,9 @@ future milestones.
    role-based authorization.
 5. ✅ Build robust inventory operations with transactions, optimistic 
    locking, and inventory movement history.
-6. 🔄 Add product search, filtering, sorting, and pagination.
+6. ✅ Add product search, filtering, sorting, and pagination.
    locking, and inventory movement history.
-7. ⬜ Implement carts, orders, and order status history.
+7. 🔄 Implement carts, orders, and order status history.
 8. ⬜ Add simulated payments and idempotency.
 9. ⬜ Add JUnit/Mockito tests.
 10. ⬜ Introduce Redis caching and Kafka events.
