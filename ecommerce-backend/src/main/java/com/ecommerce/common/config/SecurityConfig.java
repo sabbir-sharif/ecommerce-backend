@@ -52,7 +52,7 @@ public class SecurityConfig {
                 // A user may access their own profile.
                 .requestMatchers(
                         HttpMethod.GET, "/api/users/me"
-                ).authenticated()
+                ).authenticated()//duplicate code maybe
 
                 // User administration is restricted to admins.
                 .requestMatchers("/api/users/me").authenticated()
