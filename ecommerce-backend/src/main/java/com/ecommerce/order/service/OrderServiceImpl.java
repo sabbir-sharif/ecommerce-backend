@@ -64,13 +64,14 @@ public class OrderServiceImpl implements OrderService {
 
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        // Validate the cart and calculate the total.
+        // Validate products and stock; calculate the total.
         for (CartItem cartItem : cartItems) {
 
             Product product = productRepository
                     .findById(cartItem.getProduct().getId())
                     .orElseThrow(() ->
-                            new ResourceNotFoundException("Product not found"));
+                            new ResourceNotFoundException(
+                                    "Product not found"));
 
             if (product.getStatus() != ProductStatus.ACTIVE) {
                 throw new ConflictException(
@@ -85,7 +86,8 @@ public class OrderServiceImpl implements OrderService {
                                             + product.getName()));
 
             int availableQuantity =
-                    inventory.getQuantity() - inventory.getReservedQuantity();
+                    inventory.getQuantity()
+                            - inventory.getReservedQuantity();
 
             if (cartItem.getQuantity() <= 0
                     || cartItem.getQuantity() > availableQuantity) {
@@ -95,12 +97,13 @@ public class OrderServiceImpl implements OrderService {
             }
 
             BigDecimal subtotal = product.getPrice()
-                    .multiply(BigDecimal.valueOf(cartItem.getQuantity()));
+                    .multiply(BigDecimal.valueOf(
+                            cartItem.getQuantity()));
 
             totalAmount = totalAmount.add(subtotal);
         }
 
-        // Create and save the order header.
+        // Create the order header.
         Order order = new Order();
         order.setOrderNumber("ORD-" + UUID.randomUUID());
         order.setUser(user);
@@ -109,13 +112,29 @@ public class OrderServiceImpl implements OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // Save purchase-time snapshots for each item.
+        // Reserve stock and save each order-item snapshot.
         for (CartItem cartItem : cartItems) {
 
             Product product = productRepository
                     .findById(cartItem.getProduct().getId())
                     .orElseThrow(() ->
-                            new ResourceNotFoundException("Product not found"));
+                            new ResourceNotFoundException(
+                                    "Product not found"));
+
+            Inventory inventory = inventoryRepository
+                    .findByProductId(product.getId())
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException(
+                                    "Inventory not found for product: "
+                                            + product.getName()));
+
+            // Reserve stock without decreasing physical quantity.
+            inventory.setReservedQuantity(
+                    inventory.getReservedQuantity()
+                            + cartItem.getQuantity());
+
+            // The Inventory @Version field protects concurrent updates.
+            inventoryRepository.save(inventory);
 
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(savedOrder);
@@ -126,14 +145,16 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setQuantity(cartItem.getQuantity());
             orderItem.setSubtotal(
                     product.getPrice().multiply(
-                            BigDecimal.valueOf(cartItem.getQuantity())));
+                            BigDecimal.valueOf(
+                                    cartItem.getQuantity())));
 
             orderItemRepository.save(orderItem);
         }
 
-        // Clear the cart in the same database transaction.
+        // Clear the cart in the same transaction.
         cartItemRepository.deleteByCartId(cart.getId());
 
+        // Build the response.
         List<OrderItemResponse> itemResponses =
                 orderItemRepository.findByOrderId(savedOrder.getId())
                         .stream()
