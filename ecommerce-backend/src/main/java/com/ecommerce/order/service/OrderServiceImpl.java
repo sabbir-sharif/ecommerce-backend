@@ -205,6 +205,76 @@ public class OrderServiceImpl implements OrderService {
         return mapOrder(order, items);
     }
 
+    @Override
+    @Transactional
+    public OrderResponse cancelMyOrder(int orderId) {
+
+        User user = getAuthenticatedUser();
+
+        // Find and lock an order owned by the authenticated user.
+        Order order = orderRepository
+                .findByIdAndUserIdForUpdate(orderId, user.getId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Order not found"));
+
+        // Only PENDING orders can be cancelled in Phase 3.6.
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new ConflictException(
+                    "Only pending orders can be cancelled");
+        }
+
+        // Load the items whose reserved stock must be released.
+        List<OrderItem> orderItems =
+                orderItemRepository.findByOrderId(order.getId());
+
+        if (orderItems.isEmpty()) {
+            throw new ConflictException(
+                    "Cannot cancel an order without items");
+        }
+
+        // Release reserved stock for every order item.
+        for (OrderItem orderItem : orderItems) {
+
+            Inventory inventory = inventoryRepository
+                    .findByProductId(orderItem.getProduct().getId())
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException(
+                                    "Inventory not found for product: "
+                                            + orderItem.getProductName()));
+
+            int reservedQuantity = inventory.getReservedQuantity();
+            int orderedQuantity = orderItem.getQuantity();
+
+            // Never allow reservation to become negative.
+            if (orderedQuantity <= 0
+                    || reservedQuantity < orderedQuantity) {
+                throw new ConflictException(
+                        "Cannot safely release reserved stock for product: "
+                                + orderItem.getProductName());
+            }
+
+            inventory.setReservedQuantity(
+                    reservedQuantity - orderedQuantity);
+
+            inventoryRepository.save(inventory);
+        }
+
+        // Mark the order cancelled only after all releases are valid.
+        order.setStatus(OrderStatus.CANCELLED);
+
+        Order savedOrder = orderRepository.save(order);
+
+        // Return the updated order with its original item snapshots.
+        List<OrderItemResponse> itemResponses =
+                orderItemRepository.findByOrderId(savedOrder.getId())
+                        .stream()
+                        .map(orderMapper::toOrderItemResponse)
+                        .toList();
+
+        return mapOrder(savedOrder, itemResponses);
+    }
+
+
     private User getAuthenticatedUser() {
 
         Authentication authentication =

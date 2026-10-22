@@ -11,4 +11,6 @@ public interface OrderService {
     List<OrderResponse> getMyOrders();
 
     OrderResponse getMyOrderById(int orderId);
+
+    OrderResponse cancelMyOrder(int orderId);
 }

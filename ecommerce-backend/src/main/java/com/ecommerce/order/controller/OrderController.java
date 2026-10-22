@@ -57,4 +57,17 @@ public class OrderController {
                 response
         ));
     }
+
+    // Cancel order
+    @PatchMapping("/{orderId}/cancel")
+    public ResponseEntity<ApiResponse<OrderResponse>> cancelMyOrder(
+            @PathVariable int orderId) {
+
+        OrderResponse response = orderService.cancelMyOrder(orderId);
+
+        return ResponseEntity.ok(ApiResponse.success(
+                "Order cancelled successfully",
+                response
+        ));
+    }
 }
