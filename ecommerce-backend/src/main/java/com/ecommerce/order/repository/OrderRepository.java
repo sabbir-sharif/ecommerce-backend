@@ -29,4 +29,11 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
             @Param("userId") int userId
     );
 
+    // for admin work
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM Order o WHERE o.id = :orderId")
+    Optional<Order> findByIdForUpdate(
+            @Param("orderId") int orderId
+    );
+
 }

@@ -207,6 +207,113 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
+    public OrderResponse confirmOrder(int orderId) {
+        // Make sure the request is authenticated and the user exists.
+        getAuthenticatedUser();
+
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Order not found"));
+
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new ConflictException(
+                    "Only pending orders can be confirmed");
+        }
+
+        List<OrderItem> orderItems =
+                orderItemRepository.findByOrderId(order.getId());
+
+        if (orderItems.isEmpty()) {
+            throw new ConflictException(
+                    "Cannot confirm an order without items");
+        }
+
+        // Confirming does not deduct or release inventory.
+        order.setStatus(OrderStatus.CONFIRMED);
+        Order savedOrder = orderRepository.save(order);
+
+        List<OrderItemResponse> itemResponses = orderItems.stream()
+                .map(orderMapper::toOrderItemResponse)
+                .toList();
+
+        return mapOrder(savedOrder, itemResponses);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse fulfillOrder(int orderId) {
+        // Make sure the request is authenticated and the user exists.
+        getAuthenticatedUser();
+
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Order not found"));
+
+        if (order.getStatus() != OrderStatus.CONFIRMED) {
+            throw new ConflictException(
+                    "Only confirmed orders can be fulfilled");
+        }
+
+        List<OrderItem> orderItems =
+                orderItemRepository.findByOrderId(order.getId());
+
+        if (orderItems.isEmpty()) {
+            throw new ConflictException(
+                    "Cannot fulfill an order without items");
+        }
+
+        for (OrderItem orderItem : orderItems) {
+            Inventory inventory = inventoryRepository
+                    .findByProductId(orderItem.getProduct().getId())
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException(
+                                    "Inventory not found for product: "
+                                            + orderItem.getProductName()));
+
+            int orderedQuantity = orderItem.getQuantity();
+
+            if (orderedQuantity <= 0) {
+                throw new ConflictException(
+                        "Invalid ordered quantity for product: "
+                                + orderItem.getProductName());
+            }
+
+            if (inventory.getQuantity() < orderedQuantity) {
+                throw new ConflictException(
+                        "Insufficient physical stock for product: "
+                                + orderItem.getProductName());
+            }
+
+            if (inventory.getReservedQuantity() < orderedQuantity) {
+                throw new ConflictException(
+                        "Insufficient reserved stock for product: "
+                                + orderItem.getProductName());
+            }
+
+            // Fulfillment is the point of physical stock deduction.
+            inventory.setQuantity(
+                    inventory.getQuantity() - orderedQuantity);
+
+            // Release the reservation for the fulfilled units.
+            inventory.setReservedQuantity(
+                    inventory.getReservedQuantity() - orderedQuantity);
+
+            inventoryRepository.save(inventory);
+        }
+
+        // Update the order only after all inventory changes are processed.
+        order.setStatus(OrderStatus.FULFILLED);
+        Order savedOrder = orderRepository.save(order);
+
+        List<OrderItemResponse> itemResponses = orderItems.stream()
+                .map(orderMapper::toOrderItemResponse)
+                .toList();
+
+        return mapOrder(savedOrder, itemResponses);
+    }
+
+    @Override
+    @Transactional
     public OrderResponse cancelMyOrder(int orderId) {
 
         User user = getAuthenticatedUser();

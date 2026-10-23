@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -56,6 +57,30 @@ public class OrderController {
                 "Order retrieved successfully",
                 response
         ));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{orderId}/confirm")
+    public ResponseEntity<ApiResponse<OrderResponse>> confirmOrder(
+            @PathVariable int orderId) {
+
+        OrderResponse response = orderService.confirmOrder(orderId);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Order confirmed successfully", response));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{orderId}/fulfill")
+    public ResponseEntity<ApiResponse<OrderResponse>> fulfillOrder(
+            @PathVariable int orderId) {
+
+        OrderResponse response = orderService.fulfillOrder(orderId);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Order fulfilled successfully", response));
     }
 
     // Cancel order

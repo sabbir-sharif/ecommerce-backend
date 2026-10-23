@@ -13,4 +13,8 @@ public interface OrderService {
     OrderResponse getMyOrderById(int orderId);
 
     OrderResponse cancelMyOrder(int orderId);
+
+    OrderResponse confirmOrder(int orderId);
+
+    OrderResponse fulfillOrder(int orderId);
 }
