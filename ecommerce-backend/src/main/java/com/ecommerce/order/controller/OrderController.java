@@ -2,10 +2,15 @@ package com.ecommerce.order.controller;
 
 import com.ecommerce.common.response.ApiResponse;
 import com.ecommerce.order.dto.OrderResponse;
+import com.ecommerce.order.entity.OrderStatus;
 import com.ecommerce.order.service.OrderService;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,15 +40,56 @@ public class OrderController {
     }
 
     // Get all orders belonging to the authenticated user
+//    @GetMapping
+//    public ResponseEntity<ApiResponse<List<OrderResponse>>> getMyOrders() {
+//
+//        List<OrderResponse> response = orderService.getMyOrders();
+//
+//        return ResponseEntity.ok(ApiResponse.success(
+//                "Orders retrieved successfully",
+//                response
+//        ));
+//    }
+
     @GetMapping
-    public ResponseEntity<ApiResponse<List<OrderResponse>>> getMyOrders() {
+    public ResponseEntity<ApiResponse<Page<OrderResponse>>> getMyOrders(
+            @RequestParam(required = false) OrderStatus status,
+            @PageableDefault(
+                    size = 10,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            ) Pageable pageable) {
 
-        List<OrderResponse> response = orderService.getMyOrders();
+        Page<OrderResponse> response =
+                orderService.getMyOrders(status, pageable);
 
-        return ResponseEntity.ok(ApiResponse.success(
-                "Orders retrieved successfully",
-                response
-        ));
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Your orders retrieved successfully",
+                        response
+                )
+        );
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/search")
+    public ResponseEntity<ApiResponse<Page<OrderResponse>>> getAllOrders(
+            @RequestParam(required = false) OrderStatus status,
+            @PageableDefault(
+                    size = 10,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            ) Pageable pageable) {
+
+        Page<OrderResponse> response =
+                orderService.getAllOrders(status, pageable);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Orders retrieved successfully",
+                        response
+                )
+        );
     }
 
     // Get a specific order belonging to the authenticated user

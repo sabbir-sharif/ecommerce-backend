@@ -23,6 +23,8 @@ import com.ecommerce.product.repository.ProductRepository;
 import com.ecommerce.user.entity.User;
 import com.ecommerce.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -164,25 +166,79 @@ public class OrderServiceImpl implements OrderService {
         return mapOrder(savedOrder, itemResponses);
     }
 
+//    @Override
+//    @Transactional(readOnly = true)
+//    public List<OrderResponse> getMyOrders() {
+//
+//        User user = getAuthenticatedUser();
+//
+//        return orderRepository
+//                .findByUserIdOrderByCreatedAtDesc(user.getId())
+//                .stream()
+//                .map(order -> {
+//                    List<OrderItemResponse> items =
+//                            orderItemRepository.findByOrderId(order.getId())
+//                                    .stream()
+//                                    .map(orderMapper::toOrderItemResponse)
+//                                    .toList();
+//
+//                    return mapOrder(order, items);
+//                })
+//                .toList();
+//    }
+
     @Override
     @Transactional(readOnly = true)
-    public List<OrderResponse> getMyOrders() {
+    public Page<OrderResponse> getMyOrders(
+            OrderStatus status,
+            Pageable pageable) {
 
         User user = getAuthenticatedUser();
 
-        return orderRepository
-                .findByUserIdOrderByCreatedAtDesc(user.getId())
-                .stream()
-                .map(order -> {
-                    List<OrderItemResponse> items =
-                            orderItemRepository.findByOrderId(order.getId())
-                                    .stream()
-                                    .map(orderMapper::toOrderItemResponse)
-                                    .toList();
+        Page<Order> orders;
 
-                    return mapOrder(order, items);
-                })
-                .toList();
+        if (status == null) {
+            orders = orderRepository
+                    .findByUserIdOrderByCreatedAtDesc(
+                            user.getId(), pageable);
+        } else {
+            orders = orderRepository
+                    .findByUserIdAndStatusOrderByCreatedAtDesc(
+                            user.getId(), status, pageable);
+        }
+
+        return orders.map(this::mapOrderWithItems);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<OrderResponse> getAllOrders(
+            OrderStatus status,
+            Pageable pageable) {
+
+        Page<Order> orders;
+
+        if (status == null) {
+            orders = orderRepository
+                    .findAllByOrderByCreatedAtDesc(pageable);
+        } else {
+            orders = orderRepository
+                    .findByStatusOrderByCreatedAtDesc(
+                            status, pageable);
+        }
+
+        return orders.map(this::mapOrderWithItems);
+    }
+
+    private OrderResponse mapOrderWithItems(Order order) {
+
+        List<OrderItemResponse> itemResponses =
+                orderItemRepository.findByOrderId(order.getId())
+                        .stream()
+                        .map(orderMapper::toOrderItemResponse)
+                        .toList();
+
+        return mapOrder(order, itemResponses);
     }
 
     @Override

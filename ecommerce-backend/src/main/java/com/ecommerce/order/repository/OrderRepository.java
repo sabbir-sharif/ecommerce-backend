@@ -1,7 +1,10 @@
 package com.ecommerce.order.repository;
 
 import com.ecommerce.order.entity.Order;
+import com.ecommerce.order.entity.OrderStatus;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -34,6 +37,26 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     @Query("SELECT o FROM Order o WHERE o.id = :orderId")
     Optional<Order> findByIdForUpdate(
             @Param("orderId") int orderId
+    );
+
+    Page<Order> findByUserIdOrderByCreatedAtDesc(
+            int userId,
+            Pageable pageable
+    );
+
+    Page<Order> findByUserIdAndStatusOrderByCreatedAtDesc(
+            int userId,
+            OrderStatus status,
+            Pageable pageable
+    );
+
+    Page<Order> findAllByOrderByCreatedAtDesc(
+            Pageable pageable
+    );
+
+    Page<Order> findByStatusOrderByCreatedAtDesc(
+            OrderStatus status,
+            Pageable pageable
     );
 
 }
