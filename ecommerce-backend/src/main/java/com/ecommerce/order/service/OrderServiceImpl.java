@@ -17,6 +17,8 @@ import com.ecommerce.order.mapper.OrderMapper;
 import com.ecommerce.order.mapper.OrderMapper;
 import com.ecommerce.order.repository.OrderItemRepository;
 import com.ecommerce.order.repository.OrderRepository;
+import com.ecommerce.payment.entity.PaymentStatus;
+import com.ecommerce.payment.repository.PaymentRepository;
 import com.ecommerce.product.entity.Product;
 import com.ecommerce.product.entity.ProductStatus;
 import com.ecommerce.product.repository.ProductRepository;
@@ -46,6 +48,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final InventoryRepository inventoryRepository;
     private final OrderMapper orderMapper;
+    private final PaymentRepository paymentRepository;
 
     @Override
     @Transactional
@@ -308,6 +311,12 @@ public class OrderServiceImpl implements OrderService {
         if (order.getStatus() != OrderStatus.CONFIRMED) {
             throw new ConflictException(
                     "Only confirmed orders can be fulfilled");
+        }
+
+        if (!paymentRepository.existsByOrderIdAndStatus(
+                order.getId(), PaymentStatus.SUCCEEDED)) {
+            throw new ConflictException(
+                    "Order cannot be fulfilled without successful payment");
         }
 
         List<OrderItem> orderItems =
