@@ -296,8 +296,8 @@ future milestones.
 6. ✅ Add product search, filtering, sorting, and pagination.
    locking, and inventory movement history.
 7. ✅ Implement carts, orders, and order status history.
-8. 🔄 Add simulated payments and idempotency.
-9. ⬜ Add JUnit/Mockito tests.
+8. ✅ Add simulated payments and idempotency.
+9. 🔄 Add JUnit/Mockito tests.
 10. ⬜ Introduce Redis caching and Kafka events.
 11. ⬜ Add Docker Compose, API documentation, and deployment setup.
 
