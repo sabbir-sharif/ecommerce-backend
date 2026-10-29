@@ -7,7 +7,9 @@ import com.ecommerce.cart.repository.CartRepository;
 import com.ecommerce.common.exception.ConflictException;
 import com.ecommerce.common.exception.ResourceNotFoundException;
 import com.ecommerce.inventory.entity.Inventory;
+import com.ecommerce.inventory.entity.InventoryMovementType;
 import com.ecommerce.inventory.repository.InventoryRepository;
+import com.ecommerce.inventory.service.InventoryMovementService;
 import com.ecommerce.order.dto.OrderItemResponse;
 import com.ecommerce.order.dto.OrderResponse;
 import com.ecommerce.order.entity.Order;
@@ -49,6 +51,7 @@ public class OrderServiceImpl implements OrderService {
     private final InventoryRepository inventoryRepository;
     private final OrderMapper orderMapper;
     private final PaymentRepository paymentRepository;
+    private final InventoryMovementService inventoryMovementService;
 
     @Override
     @Transactional
@@ -134,12 +137,39 @@ public class OrderServiceImpl implements OrderService {
                                             + product.getName()));
 
             // Reserve stock without decreasing physical quantity.
-            inventory.setReservedQuantity(
-                    inventory.getReservedQuantity()
-                            + cartItem.getQuantity());
+//            inventory.setReservedQuantity(
+//                    inventory.getReservedQuantity()
+//                            + cartItem.getQuantity());
+//
+//            // The Inventory @Version field protects concurrent updates.
+//            inventoryRepository.save(inventory);
 
-            // The Inventory @Version field protects concurrent updates.
-            inventoryRepository.save(inventory);
+
+            int quantityBefore = inventory.getQuantity();
+            int reservedBefore = inventory.getReservedQuantity();
+
+// Reserve stock for this order.
+// Physical quantity does not change.
+            inventory.setReservedQuantity(
+                    reservedBefore + cartItem.getQuantity()
+            );
+
+            Inventory updatedInventory = inventoryRepository.save(inventory);
+
+// Record the reservation in the same transaction.
+            inventoryMovementService.record(
+                    updatedInventory,
+                    InventoryMovementType.STOCK_RESERVED,
+                    quantityBefore,
+                    updatedInventory.getQuantity(),
+                    reservedBefore,
+                    updatedInventory.getReservedQuantity(),
+                    "ORDER",
+                    order.getId(),
+                    "Stock reserved for order placement",
+                    user
+            );
+
 
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(savedOrder);
