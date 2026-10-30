@@ -1,0 +1,1764 @@
+{
+  "info": {
+    "name": "E-commerce & Inventory Backend - Phase 4 Verification v2",
+    "description": "Updated from the user's Phase 1.12 collection. Covers current authentication, catalog, inventory, cart, orders, payment and movement workflows. IMPORTANT: some routes/request DTOs are provisional and explicitly marked VERIFY; compare them with current controllers before execution. Tests assert HTTP status only where response details are not yet confirmed. Successful ApiResponse responses are expected to use status/message/body/timestamp.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "inventoryId",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "failedPaymentOrderId",
+      "value": ""
+    },
+    {
+      "key": "customerName",
+      "value": "Phase 4 Test Customer"
+    },
+    {
+      "key": "customerEmail",
+      "value": "phase4-customer@example.com"
+    },
+    {
+      "key": "customerPassword",
+      "value": "TemporaryPass123!"
+    },
+    {
+      "key": "categoryName",
+      "value": "Phase 4 Test Accessories"
+    },
+    {
+      "key": "categoryUpdatedName",
+      "value": "Phase 4 Updated Accessories"
+    },
+    {
+      "key": "productName",
+      "value": "Phase 4 Test Keyboard"
+    },
+    {
+      "key": "productUpdatedName",
+      "value": "Phase 4 Updated Keyboard"
+    },
+    {
+      "key": "productSku",
+      "value": "P4-TEST-SKU-001"
+    },
+    {
+      "key": "productSearch",
+      "value": "Keyboard"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "p4-payment-key-001"
+    },
+    {
+      "key": "failedIdempotencyKey",
+      "value": "p4-payment-key-fail-001"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Authentication",
+      "item": [
+        {
+          "name": "Register customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{customerName}}\",\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Assumed route and payload based on the current project API design. Confirm AuthController mapping and RegisterRequest fields before running."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});",
+                  "const j=pm.response.json(); const b=(j.body!==undefined?j.body:j); const value=b.id; if(value!==undefined && value!==null) pm.collectionVariables.set('userId', value);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Assumed route and payload. Inspect the response to identify the exact JWT field; then save it to the token collection variable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});",
+                  "const j=pm.response.json(); const b=j.body||j; const token=b.token||b.accessToken||b.jwt; if(token) pm.collectionVariables.set('token',token);"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Verify exact request DTO field names and token response property against AuthController/AuthService."
+    },
+    {
+      "name": "02 - Categories",
+      "item": [
+        {
+          "name": "Create category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "categories"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{categoryName}}\",\n  \"description\": \"Phase 4 verification category\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 201 Created; body contains the created category. Save its ID."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});",
+                  "const j=pm.response.json(); const b=(j.body!==undefined?j.body:j); const value=b.id; if(value!==undefined && value!==null) pm.collectionVariables.set('categoryId', value);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get category by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "categories",
+                "{{categoryId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "categories"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "categories",
+                "{{categoryId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{categoryUpdatedName}}\",\n  \"description\": \"Updated during Phase 4 verification\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get unknown category - expect 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories/99999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "categories",
+                "99999999"
+              ]
+            },
+            "description": "Negative test. Use an ID that does not exist in your database."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Users and access control",
+      "item": [
+        {
+          "name": "Get current user / profile - VERIFY ROUTE",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Legacy collection used this route. Confirm that it is still available and that its role restrictions match current SecurityConfig."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List users - ADMIN",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Expected to require ADMIN. Expected 200 for ADMIN and 403 for USER, if this route remains enabled."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "The old public-style user CRUD flow should not be assumed valid after JWT/RBAC was added. Do not use this folder to create users unless the current controller intentionally supports it."
+    },
+    {
+      "name": "04 - Products",
+      "item": [
+        {
+          "name": "Create product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{productName}}\",\n  \"description\": \"Phase 4 test product\",\n  \"sku\": \"{{productSku}}\",\n  \"price\": 4500,\n  \"categoryId\": {{categoryId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 201 Created. If the controller expects categoryId as a JSON number, replace the variable with an unquoted numeric value or use a numeric environment variable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});",
+                  "const j=pm.response.json(); const b=(j.body!==undefined?j.body:j); const value=b.id; if(value!==undefined && value!==null) pm.collectionVariables.set('productId', value);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get product by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products?page=0&size=10"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search/filter products - inspect supported parameters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?search={{productSearch}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products?search={{productSearch}}"
+              ]
+            },
+            "description": "Provisional query parameter. Compare with ProductController request parameters before relying on it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{productUpdatedName}}\",\n  \"description\": \"Updated Phase 4 test product\",\n  \"sku\": \"{{productSku}}\",\n  \"price\": 4750,\n  \"categoryId\": {{categoryId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Confirm update DTO fields and whether status is required/optional."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Duplicate SKU - expect 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate SKU test\",\n  \"description\": \"Should be rejected\",\n  \"sku\": \"{{productSku}}\",\n  \"price\": 100,\n  \"categoryId\": {{categoryId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Inventory",
+      "item": [
+        {
+          "name": "Create inventory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": {{productId}},\n  \"quantity\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected initial state: quantity=10, reservedQuantity=0, availableQuantity=10. Confirm whether the API uses 201."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});",
+                  "const j=pm.response.json(); const b=(j.body!==undefined?j.body:j); const value=b.id; if(value!==undefined && value!==null) pm.collectionVariables.set('inventoryId', value);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get inventory by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/{{inventoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "{{inventoryId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get inventory by product ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/product/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "product",
+                "{{productId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set stock quantity",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/{{inventoryId}}/stock?quantity=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "{{inventoryId}}",
+                "stock?quantity=15"
+              ]
+            },
+            "description": "Legacy route from v1. Confirm current controller mapping and whether this operation means absolute stock adjustment."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Duplicate inventory - expect 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": {{productId}},\n  \"quantity\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 - Cart",
+      "item": [
+        {
+          "name": "Add item to cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cart/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cart",
+                "items"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": {{productId}},\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "The /api/cart/items route appeared in the earlier debugging history. Confirm the HTTP method and DTO fields in CartController."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get current cart - VERIFY ROUTE",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cart"
+              ]
+            },
+            "description": "Provisional route. Confirm CartController @RequestMapping and @GetMapping."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Cart route details are not fully established by the uploaded v1 collection. Verify against CartController before running."
+    },
+    {
+      "name": "07 - Orders",
+      "item": [
+        {
+          "name": "Place order from cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Expected: 201 Created; order status PENDING; item snapshots and total are correct; physical quantity unchanged; reservedQuantity increases; cart is cleared; STOCK_RESERVED movement is recorded."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});",
+                  "const j=pm.response.json(); const b=(j.body!==undefined?j.body:j); const value=b.orderId; if(value!==undefined && value!==null) pm.collectionVariables.set('orderId', value);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get my orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Expected: paginated result if the current service returns Page<OrderResponse>. Confirm actual JSON page structure."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get my order by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Expected: only the authenticated customer's order is returned."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin search orders - VERIFY QUERY PARAMETERS",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/admin/search?page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "admin",
+                "search?page=0&size=10"
+              ]
+            },
+            "description": "Confirm ADMIN role and supported filters (e.g. status) from OrderController."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Order placement and history routes are based on the current project context. Verify exact pagination and admin-search parameters."
+    },
+    {
+      "name": "08 - Order lifecycle",
+      "item": [
+        {
+          "name": "Confirm order - ADMIN",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "confirm"
+              ]
+            },
+            "description": "Expected: valid PENDING order becomes CONFIRMED. No physical stock deduction at confirmation."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fulfill order - ADMIN",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/fulfill",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "fulfill"
+              ]
+            },
+            "description": "Prerequisite: order is CONFIRMED and payment succeeded. Expected: physical quantity and reservedQuantity both decrease by ordered quantity; status becomes FULFILLED; STOCK_FULFILLED movement is recorded."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Cancellation is intentionally not included as a runnable request because its exact controller route was not present in the uploaded collection or confirmed project context. Add it after checking OrderController."
+    },
+    {
+      "name": "09 - Payments",
+      "item": [
+        {
+          "name": "Simulate successful payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"simulatedSuccess\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: payment outcome SUCCESS and a payment record. Payment must not deduct inventory; fulfillment does that. Confirm response status and DTO fields."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Simulate failed payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{failedIdempotencyKey}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/orders/{{failedPaymentOrderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "orders",
+                "{{failedPaymentOrderId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"simulatedSuccess\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Use a separate eligible order. Expected: failed payment outcome; order must not be fulfillable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Repeat same idempotency key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"simulatedSuccess\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Repeat the same request with the same key. Expected: no second payment operation. Compare response and database record count with the first request."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response uses ApiResponse envelope', function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('status');",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('body');",
+                  "  pm.expect(j).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Payment endpoint, header and request body are based on the current project context. Confirm whether repeat-key behavior replays the original response or returns a conflict."
+    },
+    {
+      "name": "10 - Inventory movement history",
+      "item": [
+        {
+          "name": "List all inventory movements - ADMIN",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/movements?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "movements?page=0&size=20"
+              ]
+            },
+            "description": "Expected: paginated movement records. Verify ADMIN access and actual page response shape."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Movements for inventory - ADMIN",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/movements/inventory/{{inventoryId}}?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "movements",
+                "inventory",
+                "{{inventoryId}}?page=0&size=20"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Movements by reference - ADMIN",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/movements/reference/ORDER/{{orderId}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "movements",
+                "reference",
+                "ORDER",
+                "{{orderId}"
+              ]
+            },
+            "description": "Expected to include relevant ORDER movements, such as STOCK_RESERVED, STOCK_RELEASED or STOCK_FULFILLED, depending on the workflow."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Exact pagination parameters should be checked against InventoryMovementController."
+    },
+    {
+      "name": "11 - Negative and authorization checks",
+      "item": [
+        {
+          "name": "Products without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "Use this to establish whether product reads are public or protected. Expected status depends on SecurityConfig; do not assume 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Record actual security behavior', function () { pm.expect([200,401,403]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Protected order endpoint without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Expected: 401 or 403 depending on the configured authentication entry point."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unauthenticated request is rejected', function () { pm.expect([401,403]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown product - expect 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/99999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "99999999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Duplicate SKU - expect 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate SKU\",\n  \"description\": \"Negative test\",\n  \"sku\": \"{{productSku}}\",\n  \"price\": 100,\n  \"categoryId\": {{categoryId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Use a non-admin token to test admin-only endpoints separately. Do not assume every endpoint's security rule; verify the configured policy."
+    }
+  ]
+}
