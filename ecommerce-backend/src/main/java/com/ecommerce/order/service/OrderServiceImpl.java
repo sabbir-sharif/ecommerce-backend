@@ -328,27 +328,111 @@ public class OrderServiceImpl implements OrderService {
         return mapOrder(savedOrder, itemResponses);
     }
 
+//    @Override
+//    @Transactional
+//    public OrderResponse fulfillOrder(int orderId) {
+//        // Make sure the request is authenticated and the user exists.
+//        getAuthenticatedUser();
+//
+//        Order order = orderRepository.findByIdForUpdate(orderId)
+//                .orElseThrow(() ->
+//                        new ResourceNotFoundException("Order not found"));
+//
+//        if (order.getStatus() != OrderStatus.CONFIRMED) {
+//            throw new ConflictException(
+//                    "Only confirmed orders can be fulfilled");
+//        }
+//
+//        if (!paymentRepository.existsByOrderIdAndStatus(
+//                order.getId(), PaymentStatus.SUCCEEDED)) {
+//            throw new ConflictException(
+//                    "Order cannot be fulfilled without successful payment");
+//        }
+//
+//        List<OrderItem> orderItems =
+//                orderItemRepository.findByOrderId(order.getId());
+//
+//        if (orderItems.isEmpty()) {
+//            throw new ConflictException(
+//                    "Cannot fulfill an order without items");
+//        }
+//
+//        for (OrderItem orderItem : orderItems) {
+//            Inventory inventory = inventoryRepository
+//                    .findByProductId(orderItem.getProduct().getId())
+//                    .orElseThrow(() ->
+//                            new ResourceNotFoundException(
+//                                    "Inventory not found for product: "
+//                                            + orderItem.getProductName()));
+//
+//            int orderedQuantity = orderItem.getQuantity();
+//
+//            if (orderedQuantity <= 0) {
+//                throw new ConflictException(
+//                        "Invalid ordered quantity for product: "
+//                                + orderItem.getProductName());
+//            }
+//
+//            if (inventory.getQuantity() < orderedQuantity) {
+//                throw new ConflictException(
+//                        "Insufficient physical stock for product: "
+//                                + orderItem.getProductName());
+//            }
+//
+//            if (inventory.getReservedQuantity() < orderedQuantity) {
+//                throw new ConflictException(
+//                        "Insufficient reserved stock for product: "
+//                                + orderItem.getProductName());
+//            }
+//
+//            // Fulfillment is the point of physical stock deduction.
+//            inventory.setQuantity(
+//                    inventory.getQuantity() - orderedQuantity);
+//
+//            // Release the reservation for the fulfilled units.
+//            inventory.setReservedQuantity(
+//                    inventory.getReservedQuantity() - orderedQuantity);
+//
+//            inventoryRepository.save(inventory);
+//        }
+//
+//        // Update the order only after all inventory changes are processed.
+//        order.setStatus(OrderStatus.FULFILLED);
+//        Order savedOrder = orderRepository.save(order);
+//
+//        List<OrderItemResponse> itemResponses = orderItems.stream()
+//                .map(orderMapper::toOrderItemResponse)
+//                .toList();
+//
+//        return mapOrder(savedOrder, itemResponses);
+//    }
+
     @Override
     @Transactional
     public OrderResponse fulfillOrder(int orderId) {
-        // Make sure the request is authenticated and the user exists.
+
+        // 1. Make sure the request is authenticated.
         getAuthenticatedUser();
 
+        // 2. Lock the order to prevent duplicate fulfillment.
         Order order = orderRepository.findByIdForUpdate(orderId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Order not found"));
 
+        // 3. Only CONFIRMED orders can be fulfilled.
         if (order.getStatus() != OrderStatus.CONFIRMED) {
             throw new ConflictException(
                     "Only confirmed orders can be fulfilled");
         }
 
+        // 4. Require successful payment before deducting stock.
         if (!paymentRepository.existsByOrderIdAndStatus(
                 order.getId(), PaymentStatus.SUCCEEDED)) {
             throw new ConflictException(
                     "Order cannot be fulfilled without successful payment");
         }
 
+        // 5. Load order items.
         List<OrderItem> orderItems =
                 orderItemRepository.findByOrderId(order.getId());
 
@@ -357,7 +441,9 @@ public class OrderServiceImpl implements OrderService {
                     "Cannot fulfill an order without items");
         }
 
+        // 6. Deduct physical stock, release reservations, and audit changes.
         for (OrderItem orderItem : orderItems) {
+
             Inventory inventory = inventoryRepository
                     .findByProductId(orderItem.getProduct().getId())
                     .orElseThrow(() ->
@@ -373,33 +459,53 @@ public class OrderServiceImpl implements OrderService {
                                 + orderItem.getProductName());
             }
 
-            if (inventory.getQuantity() < orderedQuantity) {
+            int quantityBefore = inventory.getQuantity();
+            int reservedBefore = inventory.getReservedQuantity();
+
+            if (quantityBefore < orderedQuantity) {
                 throw new ConflictException(
                         "Insufficient physical stock for product: "
                                 + orderItem.getProductName());
             }
 
-            if (inventory.getReservedQuantity() < orderedQuantity) {
+            if (reservedBefore < orderedQuantity) {
                 throw new ConflictException(
                         "Insufficient reserved stock for product: "
                                 + orderItem.getProductName());
             }
 
-            // Fulfillment is the point of physical stock deduction.
+            // Physical stock is deducted at fulfillment.
             inventory.setQuantity(
-                    inventory.getQuantity() - orderedQuantity);
+                    quantityBefore - orderedQuantity);
 
-            // Release the reservation for the fulfilled units.
+            // Release the reservation for these fulfilled units.
             inventory.setReservedQuantity(
-                    inventory.getReservedQuantity() - orderedQuantity);
+                    reservedBefore - orderedQuantity);
 
-            inventoryRepository.save(inventory);
+            Inventory updatedInventory =
+                    inventoryRepository.save(inventory);
+
+            // Record the inventory movement in the same transaction.
+            inventoryMovementService.record(
+                    updatedInventory,
+                    InventoryMovementType.STOCK_FULFILLED,
+                    quantityBefore,
+                    updatedInventory.getQuantity(),
+                    reservedBefore,
+                    updatedInventory.getReservedQuantity(),
+                    "ORDER",
+                    order.getId(),
+                    "Stock deducted during order fulfillment",
+                    getAuthenticatedUser()
+            );
         }
 
-        // Update the order only after all inventory changes are processed.
+        // 7. Mark the order fulfilled after processing all items.
         order.setStatus(OrderStatus.FULFILLED);
+
         Order savedOrder = orderRepository.save(order);
 
+        // 8. Return the order with its item snapshots.
         List<OrderItemResponse> itemResponses = orderItems.stream()
                 .map(orderMapper::toOrderItemResponse)
                 .toList();
@@ -407,25 +513,94 @@ public class OrderServiceImpl implements OrderService {
         return mapOrder(savedOrder, itemResponses);
     }
 
+//    @Override
+//    @Transactional
+//    public OrderResponse cancelMyOrder(int orderId) {
+//
+//        User user = getAuthenticatedUser();
+//
+//        // Find and lock an order owned by the authenticated user.
+//        Order order = orderRepository
+//                .findByIdAndUserIdForUpdate(orderId, user.getId())
+//                .orElseThrow(() ->
+//                        new ResourceNotFoundException("Order not found"));
+//
+//        // Only PENDING orders can be cancelled in Phase 3.6.
+//        if (order.getStatus() != OrderStatus.PENDING) {
+//            throw new ConflictException(
+//                    "Only pending orders can be cancelled");
+//        }
+//
+//        // Load the items whose reserved stock must be released.
+//        List<OrderItem> orderItems =
+//                orderItemRepository.findByOrderId(order.getId());
+//
+//        if (orderItems.isEmpty()) {
+//            throw new ConflictException(
+//                    "Cannot cancel an order without items");
+//        }
+//
+//        // Release reserved stock for every order item.
+//        for (OrderItem orderItem : orderItems) {
+//
+//            Inventory inventory = inventoryRepository
+//                    .findByProductId(orderItem.getProduct().getId())
+//                    .orElseThrow(() ->
+//                            new ResourceNotFoundException(
+//                                    "Inventory not found for product: "
+//                                            + orderItem.getProductName()));
+//
+//            int reservedQuantity = inventory.getReservedQuantity();
+//            int orderedQuantity = orderItem.getQuantity();
+//
+//            // Never allow reservation to become negative.
+//            if (orderedQuantity <= 0
+//                    || reservedQuantity < orderedQuantity) {
+//                throw new ConflictException(
+//                        "Cannot safely release reserved stock for product: "
+//                                + orderItem.getProductName());
+//            }
+//
+//            inventory.setReservedQuantity(
+//                    reservedQuantity - orderedQuantity);
+//
+//            inventoryRepository.save(inventory);
+//        }
+//
+//        // Mark the order cancelled only after all releases are valid.
+//        order.setStatus(OrderStatus.CANCELLED);
+//
+//        Order savedOrder = orderRepository.save(order);
+//
+//        // Return the updated order with its original item snapshots.
+//        List<OrderItemResponse> itemResponses =
+//                orderItemRepository.findByOrderId(savedOrder.getId())
+//                        .stream()
+//                        .map(orderMapper::toOrderItemResponse)
+//                        .toList();
+//
+//        return mapOrder(savedOrder, itemResponses);
+//    }
+
     @Override
     @Transactional
     public OrderResponse cancelMyOrder(int orderId) {
 
         User user = getAuthenticatedUser();
 
-        // Find and lock an order owned by the authenticated user.
+        // 1. Find and lock an order owned by the authenticated user.
         Order order = orderRepository
                 .findByIdAndUserIdForUpdate(orderId, user.getId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Order not found"));
 
-        // Only PENDING orders can be cancelled in Phase 3.6.
+        // 2. Only PENDING orders can be cancelled.
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new ConflictException(
                     "Only pending orders can be cancelled");
         }
 
-        // Load the items whose reserved stock must be released.
+        // 3. Load the order items.
         List<OrderItem> orderItems =
                 orderItemRepository.findByOrderId(order.getId());
 
@@ -434,7 +609,7 @@ public class OrderServiceImpl implements OrderService {
                     "Cannot cancel an order without items");
         }
 
-        // Release reserved stock for every order item.
+        // 4. Release reserved stock and record each movement.
         for (OrderItem orderItem : orderItems) {
 
             Inventory inventory = inventoryRepository
@@ -444,29 +619,47 @@ public class OrderServiceImpl implements OrderService {
                                     "Inventory not found for product: "
                                             + orderItem.getProductName()));
 
-            int reservedQuantity = inventory.getReservedQuantity();
+            int quantityBefore = inventory.getQuantity();
+            int reservedBefore = inventory.getReservedQuantity();
             int orderedQuantity = orderItem.getQuantity();
 
-            // Never allow reservation to become negative.
+            // Validate before changing inventory.
             if (orderedQuantity <= 0
-                    || reservedQuantity < orderedQuantity) {
+                    || reservedBefore < orderedQuantity) {
                 throw new ConflictException(
                         "Cannot safely release reserved stock for product: "
                                 + orderItem.getProductName());
             }
 
+            // Cancellation releases reserved stock only.
+            // Physical quantity remains unchanged.
             inventory.setReservedQuantity(
-                    reservedQuantity - orderedQuantity);
+                    reservedBefore - orderedQuantity);
 
-            inventoryRepository.save(inventory);
+            Inventory updatedInventory =
+                    inventoryRepository.save(inventory);
+
+            // Record the change in the same transaction.
+            inventoryMovementService.record(
+                    updatedInventory,
+                    InventoryMovementType.STOCK_RELEASED,
+                    quantityBefore,
+                    updatedInventory.getQuantity(),
+                    reservedBefore,
+                    updatedInventory.getReservedQuantity(),
+                    "ORDER",
+                    order.getId(),
+                    "Reserved stock released after order cancellation",
+                    user
+            );
         }
 
-        // Mark the order cancelled only after all releases are valid.
+        // 5. Mark the order cancelled after processing its items.
         order.setStatus(OrderStatus.CANCELLED);
 
         Order savedOrder = orderRepository.save(order);
 
-        // Return the updated order with its original item snapshots.
+        // 6. Return the updated order with its original item snapshots.
         List<OrderItemResponse> itemResponses =
                 orderItemRepository.findByOrderId(savedOrder.getId())
                         .stream()

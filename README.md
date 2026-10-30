@@ -1,221 +1,343 @@
 # E-commerce & Inventory Management Backend
 
-A learning-focused REST API built with Java 21, Spring Boot, Maven, and
-MySQL. The project is being developed incrementally with a
-modular-monolith architecture and production-oriented practices.
+A production-oriented REST API built with **Java 21, Spring Boot, Spring Security, Maven, and MySQL**.
 
-> **Status:** Core domain foundation, DTO/mapping, initial services, and
-> CRUD controllers are completed. Controller integration testing is
-> next. Authentication, standardized errors, advanced stock workflows,
-> and infrastructure features are planned.
+This project is being developed incrementally using a **modular-monolith architecture** and practical backend engineering principles. It covers authentication, product management, inventory control, shopping carts, order processing, payment simulation, and inventory movement auditing.
+
+> **Project Status:** Core backend features (Phases 1–3) have been implemented. Phase 4 — Testing & Verification — is the current development milestone. Redis caching and event-driven architecture are planned for subsequent phases.
+
+---
 
 ## Tech Stack
 
--   Java 21
--   Spring Boot, Spring Web
--   Spring Data JPA / Hibernate
--   MySQL
--   Maven
--   Jakarta Bean Validation
--   Lombok
--   MapStruct
--   Postman for manual API testing
+- Java 21
+- Spring Boot
+- Spring Web
+- Spring Data JPA / Hibernate
+- Spring Security
+- JWT Authentication
+- MySQL
+- Maven
+- Jakarta Bean Validation
+- Lombok
+- MapStruct
+- JUnit 5
+- Mockito
+- Postman
+
+---
 
 ## Architecture
 
-``` text
+The application follows a feature-based modular-monolith architecture.
+
+```text
 Client / Postman
-      |
-      v
-Controller (HTTP/API)
-      |
-      v
-Service (business operations)
-      |
-      v
-Repository (Spring Data JPA)
-      |
-      v
-MySQL
+       |
+       v
+Spring Security / JWT
+       |
+       v
+Controller Layer
+       |
+       v
+Service Layer
+       |
+       v
+Repository Layer
+       |
+       v
+MySQL Database
 ```
 
-The application is organized by feature. Controllers accept requests and
-return DTOs; services coordinate business logic; repositories handle
-persistence; MapStruct converts between entities and DTOs.
+### Layer Responsibilities
 
-## Completed So Far
+- **Security:** Authenticates users and enforces role-based access.
+- **Controller:** Handles HTTP requests, validation and API responses.
+- **Service:** Contains business rules and coordinates operations.
+- **Repository:** Handles database access using Spring Data JPA.
+- **Entity:** Represents persistent domain objects.
+- **DTO:** Defines API request and response structures.
+- **Mapper:** Uses MapStruct to convert between entities and DTOs.
 
-### Project and database foundation
+The project uses feature-based packages to keep related functionality organized.
 
--   Created the Spring Boot Maven project and configured local MySQL.
--   Designed the initial domain model and relationships.
--   Created core entities and tables: `Role`, `User`, `Category`,
-    `Product`, and `Inventory`.
--   Current entity identifiers use integer types (`int` / `Integer`).
--   Added entity timestamp lifecycle handling.
--   Added status enums for users, categories, and products.
--   Added an inventory `@Version` field as the foundation for optimistic
-    locking.
+---
 
-### Repositories, DTOs, and mapping
+## Implemented Features
 
--   Created Spring Data repositories for the core entities.
--   Added request/response DTOs for user, category, product, and
-    inventory features.
--   Configured MapStruct with Lombok annotation processing and created
-    the corresponding mapper interfaces.
+### 1. Authentication and Authorization
 
-### Services
+- User registration and login.
+- Password hashing.
+- JWT-based authentication.
+- Role-based access control.
+- USER and ADMIN roles.
+- Protected API endpoints.
 
-Initial service interfaces and implementations are complete for: -
-User - Category - Product - Inventory
+### 2. User Management
 
-Current service logic includes basic CRUD operations where applicable,
-duplicate checks (email, category name, SKU, and inventory per product),
-and resolving related entities such as a product's category in the
-service layer.
+- User creation and retrieval.
+- User information management.
+- Email uniqueness validation.
+- User status management.
 
-### Controllers
+### 3. Category Management
 
-Initial REST controllers are implemented for: - `CategoryController` -
-`UserController` - `ProductController` - `InventoryController`
+- Create, retrieve, update and delete categories.
+- Category-product relationship.
+- Duplicate category validation.
 
-They delegate to services and return DTOs through `ResponseEntity`.
+### 4. Product Management
 
-## Current API Endpoints
+- Product CRUD operations.
+- SKU uniqueness validation.
+- Product-category association.
+- Product status management.
+- Search and filtering.
+- Pagination and sorting.
+- Product DTO mapping.
 
-Local base URL: `http://localhost:8080`
+### 5. Inventory Management
 
-  -----------------------------------------------------------------------------------------------
-Feature           Method            Endpoint                                  Purpose
-  ----------------- ----------------- ----------------------------------------- -----------------
-Categories        POST              `/api/categories`                         Create category
+- Inventory creation and retrieval.
+- Stock quantity management.
+- Reserved stock tracking.
+- Available quantity calculation.
+- Optimistic locking using JPA `@Version`.
+- Inventory consistency checks.
 
-Categories        GET               `/api/categories/{id}`                    Get category by
-ID
+The available quantity is calculated as:
 
-Categories        GET               `/api/categories`                         List categories
+```text
+availableQuantity = quantity - reservedQuantity
+```
 
-Categories        PUT               `/api/categories/{id}`                    Update category
+Physical stock and reserved stock are tracked separately.
 
-Categories        DELETE            `/api/categories/{id}`                    Delete category
+### 6. Shopping Cart
 
-Users             POST              `/api/users`                              Create user
+- Add products to cart.
+- Update item quantities.
+- Remove cart items.
+- Retrieve the authenticated user's cart.
+- Validate product availability.
+- Validate requested quantities.
 
-Users             GET               `/api/users/{id}`                         Get user by ID
+### 7. Order Management
 
-Users             GET               `/api/users`                              List users
+- Place orders from the shopping cart.
+- Generate order information.
+- Store order item snapshots.
+- Preserve product name, SKU and unit price at purchase time.
+- Retrieve customer order history.
+- Retrieve individual orders.
+- Filter orders by status.
+- Paginate order results.
+- Admin order search.
 
-Users             PUT               `/api/users/{id}`                         Update user
-name/email
+### 8. Inventory Reservation and Fulfillment
 
-Users             DELETE            `/api/users/{id}`                         Delete user
+- Reserve inventory when an order is placed.
+- Release reserved stock when an eligible order is cancelled.
+- Confirm pending orders.
+- Fulfill confirmed orders after successful payment.
+- Deduct physical inventory during fulfillment.
+- Use transaction boundaries to maintain consistency.
+- Use pessimistic locking for critical order operations.
 
-Products          POST              `/api/products`                           Create product
+### 9. Payment Simulation and Idempotency
 
-Products          GET               `/api/products/{id}`                      Get product by ID
+- Simulated payment success and failure.
+- Payment records associated with orders.
+- Idempotency key support.
+- Protection against duplicate payment processing.
+- Payment verification before fulfillment.
 
-Products          GET               `/api/products`                           List products
+This is a simulated payment workflow, not a real payment gateway integration.
 
-Products          PUT               `/api/products/{id}`                      Update product
+### 10. Audit Trails and Inventory Movement History
 
-Products          DELETE            `/api/products/{id}`                      Delete product
+- Record inventory-changing operations.
+- Track stock before and after changes.
+- Track reserved quantity before and after changes.
+- Record movement types and reasons.
+- Associate movements with relevant references and users where available.
+- Retrieve movement history with pagination.
 
-Inventory         POST              `/api/inventory`                          Create inventory
-for product
+Movement types include:
 
-Inventory         GET               `/api/inventory/{id}`                     Get inventory by
-inventory ID
+- `STOCK_ADDED`
+- `STOCK_REMOVED`
+- `STOCK_ADJUSTED`
+- `STOCK_RESERVED`
+- `STOCK_RELEASED`
+- `STOCK_FULFILLED`
 
-Inventory         GET               `/api/inventory/product/{productId}`      Get inventory by
-product ID
+---
 
-Inventory         GET               `/api/inventory`                          List inventory
+## Order Lifecycle
 
-Inventory         PUT               `/api/inventory/{id}/stock?quantity=20`   Set stock
-quantity (basic
-implementation)
-  -----------------------------------------------------------------------------------------------
+The current order lifecycle is:
 
-## Example Requests
+```text
+        PENDING
+           |
+           v
+       CONFIRMED
+           |
+           v
+       FULFILLED
+```
 
-### Create category
+A pending order can also be cancelled:
 
-`POST /api/categories`
+```text
+        PENDING
+           |
+           v
+       CANCELLED
+```
 
-``` json
+Important inventory behavior:
+
+| Operation | Physical Quantity | Reserved Quantity |
+|---|---:|---:|
+| Order placement | Unchanged | Increases |
+| Order cancellation | Unchanged | Decreases |
+| Order fulfillment | Decreases | Decreases |
+
+Fulfillment requires a confirmed order and successful payment.
+
+---
+
+## API Overview
+
+Local base URL:
+
+```text
+http://localhost:8080
+```
+
+The following are the main API routes currently established in the project. Refer to the controllers and Postman collection for exact request and response details.
+
+| Feature | Method | Endpoint |
+|---|---|---|
+| Register | POST | `/api/auth/register` |
+| Login | POST | `/api/auth/login` |
+| Products | GET | `/api/products` |
+| Product details | GET | `/api/products/{id}` |
+| Create product | POST | `/api/products` |
+| Update product | PUT | `/api/products/{id}` |
+| Categories | GET | `/api/categories` |
+| Create category | POST | `/api/categories` |
+| Inventory | GET | `/api/inventory` |
+| Create inventory | POST | `/api/inventory` |
+| Cart | GET | `/api/cart` |
+| Place order | POST | `/api/orders` |
+| Customer order history | GET | `/api/orders` |
+| Order details | GET | `/api/orders/{orderId}` |
+| Confirm order | PATCH | `/api/orders/{orderId}/confirm` |
+| Fulfill order | PATCH | `/api/orders/{orderId}/fulfill` |
+| Simulate payment | POST | `/api/payments/orders/{orderId}` |
+| Inventory movements | GET | `/api/inventory/movements` |
+| Inventory movement history | GET | `/api/inventory/movements/inventory/{inventoryId}` |
+| Movement by reference | GET | `/api/inventory/movements/reference/{referenceType}/{referenceId}` |
+
+Some features have additional routes for updates, deletion, filtering, pagination and administration.
+
+---
+
+## Standard API Response
+
+The application uses a common `ApiResponse` wrapper for standardized API responses.
+
+Conceptual example:
+
+```json
 {
-  "name": "Electronics",
-  "description": "Electronic devices and accessories"
+  "status": "SUCCESS",
+  "message": "Operation completed successfully",
+  "body": {},
+  "timestamp": "2026-10-30T12:00:00"
 }
 ```
 
-### Create product
+Actual status values and timestamp formatting depend on the implementation.
 
-Requires an existing category ID.
+---
 
-`POST /api/products`
+## Project Structure
 
-``` json
-{
-  "name": "Mechanical Keyboard",
-  "description": "RGB keyboard",
-  "sku": "KB-001",
-  "price": 4500,
-  "categoryId": 1
-}
+The application uses a feature-based package structure.
+
+```text
+com.ecommerce
+│
+├── auth
+├── user
+├── role
+├── category
+├── product
+├── inventory
+├── cart
+├── order
+├── payment
+├── common
+│   ├── config
+│   ├── exception
+│   └── response
+│
+└── EcommerceApplication.java
 ```
 
-### Create inventory
+Each feature can contain its own:
 
-Requires an existing product ID.
-
-`POST /api/inventory`
-
-``` json
-{
-  "productId": 1,
-  "quantity": 10
-}
+```text
+feature/
+├── controller/
+├── service/
+├── repository/
+├── entity/
+├── dto/
+└── mapper/
 ```
 
-Example response:
+The exact package organization may vary slightly by feature.
 
-``` json
-{
-  "id": 1,
-  "productId": 1,
-  "quantity": 10,
-  "reservedQuantity": 0,
-  "availableQuantity": 10,
-  "version": 0
-}
-```
-
-`availableQuantity` is derived as `quantity - reservedQuantity`, not
-stored separately.
+---
 
 ## Local Setup
 
 ### Requirements
 
--   JDK 21
--   Maven (or project Maven wrapper, if present)
--   MySQL Server
--   Postman or another REST client
+- JDK 21
+- Maven or Maven Wrapper
+- MySQL Server
+- Postman
 
-### 1. Create database
+### 1. Clone the repository
 
-``` sql
+```bash
+git clone <YOUR_REPOSITORY_URL>
+cd ecommerce-backend
+```
+
+### 2. Create the database
+
+```sql
 CREATE DATABASE ecommerce_db;
 ```
 
-### 2. Configure `src/main/resources/application.properties`
+### 3. Configure database credentials
 
-``` properties
-spring.datasource.url=jdbc:DB_URL
-spring.datasource.username=DB_USERNAME
-spring.datasource.password=DB_PASSWORD
+Configure `src/main/resources/application.properties`:
+
+```properties
+spring.datasource.url=${DB_URL:jdbc:mysql://localhost:3306/ecommerce_db}
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD}
+
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
 spring.jpa.hibernate.ddl-auto=update
@@ -223,66 +345,126 @@ spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
 ```
 
-Replace the placeholder with your local password. Do not commit real
-credentials. Use environment variables or a secrets manager for
-shared/deployed environments.
+Set the appropriate environment variables for your local environment.
 
-### 3. Run
+Do not commit actual database credentials, JWT secrets, or other sensitive configuration.
 
-From the project root:
-
-``` bash
-./mvnw spring-boot:run
-```
+### 4. Run the application
 
 Windows PowerShell:
 
-``` powershell
+```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-If there is no Maven wrapper:
+Linux/macOS:
 
-``` bash
+```bash
+./mvnw spring-boot:run
+```
+
+Without Maven Wrapper:
+
+```bash
 mvn spring-boot:run
 ```
+
+---
+
 ## Postman Collection
 
-The project includes a ready-to-import Postman collection located in the `docs/postman/` directory.
+The project includes a Postman collection under:
 
-### File Location
 ```text
 docs/postman/
 └── Postman_Collection_Import_v1.json
 ```
 
-## Suggested Manual Test Order
+Import the collection into Postman and configure the appropriate environment variables, including the local base URL and authentication token.
 
-1.  Ensure a role row exists in MySQL (there is not yet a role-creation
-    controller in the completed API list).
-2.  Create a user with that existing `roleId`.
-3.  Create a category.
-4.  Create a product using the existing `categoryId`.
-5.  Create inventory using the existing `productId`.
-6.  Test the GET, update, and delete endpoints.
-7.  Test invalid inputs and missing related IDs.
+---
 
-## Current Limitations
+## Development Roadmap
 
-This is an in-progress learning project, not yet production-ready: -
-Authentication and authorization are not complete; do not expose the
-current user endpoints publicly in a deployed environment. - Password
-hashing/authentication is planned; use only dummy local credentials and
-never submit a real password to the current development flow. - Some
-service errors still use generic runtime exceptions; custom exceptions
-and global error handling are planned. - Stock update currently sets an
-absolute quantity; robust inventory operations, transaction boundaries,
-concurrency conflict handling, and movement auditing are still
-planned. - `@Version` is present as a foundation, but complete conflict
-handling is not yet implemented. - Automated and full integration tests
-are pending. - Search/filter/pagination, carts, orders, payment
-idempotency, Redis, Kafka, Docker Compose, API docs, and deployment are
-future milestones.
+The project is developed in phases.
+
+| Phase | Description | Status |
+|---|---|---|
+| Phase 1 | Project and domain foundation | Implemented |
+| Phase 2 | Authentication and security | Implemented |
+| Phase 3 | Core e-commerce backend features (3.1–3.10) | Implemented; verification pending |
+| Phase 4 | Testing and verification | Current |
+| Phase 5 | Redis caching | Planned |
+| Phase 6 | Event-driven architecture with Kafka | Planned |
+
+### Phase 4 — Testing and Verification
+
+The next milestone focuses on verifying the complete Phase 3 implementation.
+
+Planned testing includes:
+
+- JUnit 5 and Mockito unit testing.
+- Spring Boot integration testing.
+- Authentication and authorization testing.
+- Product, category and inventory testing.
+- Cart and order workflow testing.
+- Inventory reservation and fulfillment testing.
+- Payment and idempotency testing.
+- Inventory movement and audit testing.
+- Transaction rollback and concurrency testing.
+- End-to-end API testing using Postman.
+
+### Phase 5 — Redis Caching
+
+Planned improvements:
+
+- Redis integration.
+- Product read caching.
+- Cache expiration and invalidation.
+- Cache consistency during product updates.
+
+### Phase 6 — Event-Driven Architecture
+
+Planned improvements:
+
+- Apache Kafka integration.
+- Event publishing and consumption.
+- Asynchronous order processing.
+- Event-driven inventory and notification workflows.
+- Reliable event handling and failure recovery.
+
+---
+
+## Current Project Scope and Limitations
+
+This is a learning-focused backend project using production-oriented design principles. It is not yet a fully production-deployed application.
+
+- Payment processing is simulated; no real payment provider is integrated.
+- Phase 4 automated and end-to-end verification is in progress.
+- Redis caching and Kafka-based event processing have not yet been implemented.
+- Docker-based deployment and production infrastructure are future improvements.
+- Performance, load testing, monitoring and deployment hardening remain future work.
+
+The implementation and testing status of individual features should be distinguished; implemented functionality is not automatically considered fully verified.
+
+---
+
+## Project Goal
+
+The goal is to develop a maintainable, secure and production-oriented e-commerce backend while demonstrating practical knowledge of:
+
+- Java and Spring Boot.
+- REST API design.
+- Database modeling and persistence.
+- Authentication and authorization.
+- Transaction management.
+- Inventory consistency and concurrency control.
+- Payment idempotency.
+- Automated testing.
+- Caching.
+- Event-driven architecture.
+
+This project is developed incrementally, with emphasis on understanding architectural decisions and being able to explain and defend the implementation.
 
 ## Roadmap
 
