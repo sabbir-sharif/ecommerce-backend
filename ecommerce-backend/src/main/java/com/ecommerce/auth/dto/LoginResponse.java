@@ -13,7 +13,14 @@ import lombok.NoArgsConstructor;
 public class LoginResponse {
 
     private String accessToken;
+
     private String tokenType;
+
     private long expiresIn;
+
+    private String refreshToken;
+
+    private long refreshTokenExpiresIn;
+
     private UserResponse user;
 }
