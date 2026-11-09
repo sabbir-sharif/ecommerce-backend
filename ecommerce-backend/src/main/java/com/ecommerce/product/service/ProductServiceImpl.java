@@ -12,6 +12,9 @@ import com.ecommerce.product.entity.ProductStatus;
 import com.ecommerce.product.mapper.ProductMapper;
 import com.ecommerce.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -140,6 +143,10 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(
+            cacheNames = "productsById",
+            allEntries = true
+    )
     public ProductResponse create(ProductCreateRequest request) {
 
         if (productRepository.existsBySku(request.getSku())) {
@@ -166,6 +173,10 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable(
+            cacheNames = "productsById",
+            key = "#id"
+    )
     public ProductResponse getById(int id) {
 
         Product product = productRepository.findById(id)
@@ -184,7 +195,12 @@ public class ProductServiceImpl implements ProductService {
                 .toList();
     }
 
+
+    //@CachePut(cacheNames = "productsById", key = "#id")
+    // Using cache update is more efficient. but only it returns proper dto
+    //@CacheEvict(cacheNames = "productsById", allEntries = true)
     @Override
+    @CachePut(cacheNames = "productsById", key = "#id")
     public ProductResponse update(
             int id,
             ProductUpdateRequest request) {
@@ -216,6 +232,10 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(
+            cacheNames = "productsById",
+            allEntries = true
+    )
     public void delete(int id) {
 
         Product product = productRepository.findById(id)

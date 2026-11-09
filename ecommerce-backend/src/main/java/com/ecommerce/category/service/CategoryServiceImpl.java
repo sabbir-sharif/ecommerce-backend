@@ -9,6 +9,8 @@ import com.ecommerce.category.repository.CategoryRepository;
 import com.ecommerce.common.exception.ConflictException;
 import com.ecommerce.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,6 +23,14 @@ public class CategoryServiceImpl implements CategoryService {
     private final CategoryMapper categoryMapper;
 
     @Override
+    @CacheEvict(
+            cacheNames = {
+                    "categoriesById",
+                    "categoriesAll",
+                    "productsById"
+            },
+            allEntries = true
+    )
     public CategoryResponse create(CategoryCreateRequest request) {
 
         if (categoryRepository.existsByName(request.getName())) {
@@ -37,6 +47,10 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Cacheable(
+            cacheNames = "categoriesById",
+            key = "#id"
+    )
     public CategoryResponse getById(int id) {
 
         Category category = categoryRepository.findById(id)
@@ -47,6 +61,10 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Cacheable(
+            cacheNames = "categoriesAll",
+            key = "'all'"
+    )
     public List<CategoryResponse> getAll() {
 
         return categoryRepository.findAll()
@@ -56,6 +74,14 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(
+            cacheNames = {
+                    "categoriesById",
+                    "categoriesAll",
+                    "productsById"
+            },
+            allEntries = true
+    )
     public CategoryResponse update(
             int id,
             CategoryCreateRequest request) {
@@ -84,6 +110,14 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(
+            cacheNames = {
+                    "categoriesById",
+                    "categoriesAll",
+                    "productsById"
+            },
+            allEntries = true
+    )
     public void delete(int id) {
 
         Category category = categoryRepository.findById(id)
