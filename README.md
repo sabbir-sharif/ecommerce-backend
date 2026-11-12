@@ -384,6 +384,345 @@ Import the collection into Postman and configure the appropriate environment var
 
 ---
 
+
+# Docker Deployment
+
+This project supports Docker-based execution using Docker Compose.
+
+The current setup runs:
+- Spring Boot application inside Docker.
+- Redis inside Docker.
+- MySQL directly on the host machine (Windows/Linux).
+
+This hybrid architecture allows developers to containerize the application and caching infrastructure without migrating an existing MySQL database.
+
+## 1. Docker Architecture
+
+```text
+                 Host Machine
+        +-----------------------------+
+        |                             |
+        |  MySQL Server               |
+        |  Port: 3306                 |
+        |                             |
+        +-------------+---------------+
+                      |
+              host.docker.internal
+                      |
+        +-------------+---------------+
+        |         Docker Compose      |
+        |                             |
+        |  +-----------------------+  |
+        |  | Spring Boot API       |  |
+        |  | Port: 8080            |  |
+        |  +-----------+-----------+  |
+        |              |              |
+        |  +-----------v-----------+  |
+        |  | Redis 7.4             |  |
+        |  | Port: 6379            |  |
+        |  +-----------------------+  |
+        |                             |
+        +-----------------------------+
+```
+
+## 2. Prerequisites
+
+Install the following:
+
+- Docker Desktop or Docker Engine with Docker Compose.
+- MySQL Server 8.x running on the host machine.
+- An existing `ecommerce_db` database.
+
+Java and Maven do not need to be installed to build and run the application through Docker.
+
+## 3. Dockerfile
+
+The project uses a multi-stage Dockerfile.
+
+- Build stage: Maven and JDK 21 compile the application.
+- Runtime stage: Java 21 JRE runs the executable JAR.
+
+```dockerfile
+# Stage 1: Build application
+FROM maven:3.9-eclipse-temurin-21 AS builder
+
+WORKDIR /app
+
+COPY pom.xml .
+RUN mvn dependency:go-offline
+
+COPY src ./src
+
+RUN mvn clean package -DskipTests
+
+
+# Stage 2: Run application
+FROM eclipse-temurin:21-jre
+
+WORKDIR /app
+
+COPY --from=builder /app/target/*.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+Tests are skipped during image creation. Run the test suite separately before deployment.
+
+## 4. Docker Ignore
+
+Create a `.dockerignore` file in the application directory.
+
+```dockerignore
+target/
+.git/
+.idea/
+.vscode/
+*.iml
+
+.env
+.env.*
+!.env.example
+
+*.log
+```
+
+This prevents unnecessary files and local secrets from entering the Docker build context.
+
+## 5. Redis Configuration
+
+Configure Redis in `application.properties`:
+
+```properties
+spring.data.redis.host=${REDIS_HOST:localhost}
+spring.data.redis.port=${REDIS_PORT:6379}
+```
+
+Redis hostname depends on the execution environment:
+
+| Environment | Redis Host |
+|---|---|
+| Local Spring Boot | localhost |
+| Docker Compose | redis |
+
+Docker Compose uses the service name `redis` for internal communication.
+
+## 6. Environment Variables
+
+Create a `.env` file in the application directory, beside `Dockerfile` and `compose.yaml`.
+
+```dotenv
+DB_USERNAME=ecommerce_user
+DB_PASSWORD=your-mysql-password
+JWT_SECRET=your-long-random-jwt-secret-at-least-32-characters
+```
+
+Use your own credentials and a strong JWT secret.
+
+Add `.env` to `.gitignore`.
+
+Never commit real database credentials or JWT secrets to GitHub.
+
+## 7. Docker Compose Configuration
+
+The `compose.yaml` file defines the Spring Boot application and Redis services.
+
+```yaml
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ecommerce-backend:1.0
+    container_name: ecommerce-app
+    restart: unless-stopped
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      DB_URL: jdbc:mysql://host.docker.internal:3306/ecommerce_db
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: ecommerce-redis
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:6379:6379"
+
+    volumes:
+      - redis-data:/data
+
+    command: ["redis-server", "--appendonly", "yes"]
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis-data:
+```
+
+### Important MySQL Configuration
+
+The application connects to MySQL using:
+
+```text
+jdbc:mysql://host.docker.internal:3306/ecommerce_db
+```
+
+`host.docker.internal` allows the application container to communicate with MySQL running on the host machine.
+
+Make sure:
+- MySQL Server is running.
+- The `ecommerce_db` database exists.
+- The configured MySQL user has the required permissions.
+- The host firewall permits the Docker connection to MySQL.
+
+Do not expose MySQL publicly.
+
+## 8. Build and Run
+
+Open PowerShell in the application directory:
+
+```powershell
+docker compose config
+```
+
+Build the application image and start all containers:
+
+```powershell
+docker compose up --build -d
+```
+
+Check running containers:
+
+```powershell
+docker compose ps
+```
+
+View application logs:
+
+```powershell
+docker compose logs -f app
+```
+
+View Redis logs:
+
+```powershell
+docker compose logs -f redis
+```
+
+The backend API should be accessible at:
+
+```text
+http://localhost:8080
+```
+
+## 9. Verify Redis
+
+Open Redis CLI:
+
+```powershell
+docker exec -it ecommerce-redis redis-cli
+```
+
+Test Redis:
+
+```redis
+PING
+```
+
+Expected response:
+
+```text
+PONG
+```
+
+Check cached products:
+
+```redis
+SCAN 0 MATCH "*productsById*"
+```
+
+Check category cache:
+
+```redis
+SCAN 0 MATCH "*categories*"
+```
+
+## 10. Stop and Restart Containers
+
+Stop containers:
+
+```powershell
+docker compose down
+```
+
+Start them again:
+
+```powershell
+docker compose up -d
+```
+
+Rebuild after application code changes:
+
+```powershell
+docker compose up --build -d
+```
+
+**Important:** Avoid the following command during normal development:
+
+```powershell
+docker compose down -v
+```
+
+The `-v` option deletes named volumes, including the persistent Redis data volume.
+
+## 11. Docker Benefits
+
+- Consistent application runtime.
+- Simplified application setup.
+- Redis runs independently in a container.
+- Multi-stage Docker build reduces runtime image contents.
+- Redis data persistence through Docker volumes.
+- Easy startup and shutdown using Docker Compose.
+- Easier onboarding for other developers.
+
+## 12. Current Dockerization Scope
+
+| Component | Deployment |
+|---|---|
+| Spring Boot | Docker container |
+| Redis | Docker container |
+| MySQL | Host machine |
+| Docker Compose | Service orchestration |
+
+A fully containerized MySQL deployment can be introduced later if required.
+
+## 13. Future Improvements
+
+- Containerize MySQL.
+- Add automated database migrations.
+- Add application health checks.
+- Improve container security and run as a non-root user.
+- Add Kafka and event-driven processing.
+- Introduce production deployment configuration.
+
+
 ## Development Roadmap
 
 The project is developed in phases.
