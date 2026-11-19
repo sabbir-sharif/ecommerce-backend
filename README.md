@@ -692,17 +692,24 @@ docker compose down -v
 
 The `-v` option deletes named volumes, including the persistent Redis data volume.
 
-## 11. Docker Benefits
+[//]: # (## 11. Docker Benefits)
 
-- Consistent application runtime.
-- Simplified application setup.
-- Redis runs independently in a container.
-- Multi-stage Docker build reduces runtime image contents.
-- Redis data persistence through Docker volumes.
-- Easy startup and shutdown using Docker Compose.
-- Easier onboarding for other developers.
+[//]: # ()
+[//]: # (- Consistent application runtime.)
 
-## 12. Current Dockerization Scope
+[//]: # (- Simplified application setup.)
+
+[//]: # (- Redis runs independently in a container.)
+
+[//]: # (- Multi-stage Docker build reduces runtime image contents.)
+
+[//]: # (- Redis data persistence through Docker volumes.)
+
+[//]: # (- Easy startup and shutdown using Docker Compose.)
+
+[//]: # (- Easier onboarding for other developers.)
+
+## 11. Current Dockerization 
 
 | Component | Deployment |
 |---|---|
@@ -713,14 +720,20 @@ The `-v` option deletes named volumes, including the persistent Redis data volum
 
 A fully containerized MySQL deployment can be introduced later if required.
 
-## 13. Future Improvements
+[//]: # (## 13. Future Improvements)
 
-- Containerize MySQL.
-- Add automated database migrations.
-- Add application health checks.
-- Improve container security and run as a non-root user.
-- Add Kafka and event-driven processing.
-- Introduce production deployment configuration.
+[//]: # ()
+[//]: # (- Containerize MySQL.)
+
+[//]: # (- Add automated database migrations.)
+
+[//]: # (- Add application health checks.)
+
+[//]: # (- Improve container security and run as a non-root user.)
+
+[//]: # (- Add Kafka and event-driven processing.)
+
+[//]: # (- Introduce production deployment configuration.)
 
 
 ## Development Roadmap
@@ -732,8 +745,8 @@ The project is developed in phases.
 | Phase 1 | Project and domain foundation | Implemented |
 | Phase 2 | Authentication and security | Implemented |
 | Phase 3 | Core e-commerce backend features (3.1–3.10) | Implemented; verification pending |
-| Phase 4 | Testing and verification | Current |
-| Phase 5 | Redis caching | Planned |
+| Phase 4 | Testing and verification | Implemented |
+| Phase 5 | Redis caching | Implemented |
 | Phase 6 | Event-driven architecture with Kafka | Planned |
 
 ### Phase 4 — Testing and Verification
@@ -762,17 +775,24 @@ Planned improvements:
 - Cache expiration and invalidation.
 - Cache consistency during product updates.
 
-### Phase 6 — Event-Driven Architecture
+[//]: # (### Phase 6 — Event-Driven Architecture)
 
-Planned improvements:
+[//]: # ()
+[//]: # (Planned improvements:)
 
-- Apache Kafka integration.
-- Event publishing and consumption.
-- Asynchronous order processing.
-- Event-driven inventory and notification workflows.
-- Reliable event handling and failure recovery.
+[//]: # ()
+[//]: # (- Apache Kafka integration.)
 
----
+[//]: # (- Event publishing and consumption.)
+
+[//]: # (- Asynchronous order processing.)
+
+[//]: # (- Event-driven inventory and notification workflows.)
+
+[//]: # (- Reliable event handling and failure recovery.)
+
+[//]: # ()
+[//]: # (---)
 
 ## Current Project Scope and Limitations
 
